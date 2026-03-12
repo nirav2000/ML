@@ -29,6 +29,14 @@
     .controls { margin-bottom: 8px; }
     .hint { color: #444; font-size: 0.95rem; margin: 0 0 8px; }
     .status { color: #222; font-size: 0.95rem; margin: 0 0 8px; }
+    #metrics {
+      margin: 0 0 10px;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: #fcfcfc;
+      font-size: 0.92rem;
+    }
     #explanation {
       padding: 12px;
       border: 1px solid #d8d8d8;
@@ -70,7 +78,8 @@
         </label>
       </div>
       <p class="hint">Tip: use <strong>Step Training Move</strong> for one update at a time, or enable live mode to watch full episodes.</p>
-      <p id="status" class="status">Idle.</p>
+      <p id="status" class="status" aria-live="polite">Idle.</p>
+      <div id="metrics" aria-live="polite">No completed episodes yet.</div>
       <p id="stats"></p>
     </div>
 
@@ -87,6 +96,7 @@
     const showLearningEl = document.getElementById("showLearning");
     const visualSpeedEl = document.getElementById("visualSpeed");
     const speedLabelEl = document.getElementById("speedLabel");
+    const metricsEl = document.getElementById("metrics");
     const train100Btn = document.getElementById("train100");
     const train1000Btn = document.getElementById("train1000");
     const stepMoveBtn = document.getElementById("stepMove");
@@ -110,8 +120,12 @@
 
     let episode = 0;
     let rewardsHistory = [];
+    const outcomesHistory = [];
+    const METRICS_WINDOW = 100;
     let busy = false;
     let cancelRequested = false;
+
+    const SAVE_KEY = "ml101-qlearning-state-v1";
 
     let stepSession = {
       active: false,
@@ -122,6 +136,30 @@
 
     function sleep(ms) {
       return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function saveState() {
+      const state = { Q, epsilon, episode, rewardsHistory, outcomesHistory };
+      localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(SAVE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !parsed.Q) return;
+
+        Q = parsed.Q;
+        epsilon = Number.isFinite(parsed.epsilon) ? parsed.epsilon : epsilon;
+        episode = Number.isFinite(parsed.episode) ? parsed.episode : episode;
+        rewardsHistory = Array.isArray(parsed.rewardsHistory) ? parsed.rewardsHistory.slice(-100) : [];
+        if (Array.isArray(parsed.outcomesHistory)) {
+          outcomesHistory.push(...parsed.outcomesHistory.slice(-METRICS_WINDOW));
+        }
+      } catch {
+        statusEl.textContent = "Could not load saved state. Starting fresh.";
+      }
     }
 
     function stateKey(x, y) {
@@ -260,7 +298,15 @@
       rewardsHistory.push(totalReward);
       if (rewardsHistory.length > 100) rewardsHistory.shift();
 
+      const terminalOutcome = state.x === GOAL.x && state.y === GOAL.y
+        ? "goal"
+        : isTrap(state.x, state.y)
+          ? "trap"
+          : "timeout";
+      recordOutcome({ outcome: terminalOutcome, steps });
+
       epsilon = Math.max(minEpsilon, epsilon * epsilonDecay);
+      saveState();
       return { totalReward, steps };
     }
 
@@ -291,6 +337,12 @@
         epsilon = Math.max(minEpsilon, epsilon * epsilonDecay);
 
         const ending = done ? "terminal state reached" : "max steps reached";
+        const terminalOutcome = stepSession.state.x === GOAL.x && stepSession.state.y === GOAL.y
+          ? "goal"
+          : isTrap(stepSession.state.x, stepSession.state.y)
+            ? "trap"
+            : "timeout";
+        recordOutcome({ outcome: terminalOutcome, steps: stepSession.steps });
         statusEl.textContent = `Step episode completed (${ending}). Total reward: ${stepSession.totalReward.toFixed(3)}.`;
         stepSession = { active: false, state: null, totalReward: 0, steps: 0 };
         draw();
@@ -329,6 +381,26 @@
     function average(arr) {
       if (!arr.length) return 0;
       return arr.reduce((a, b) => a + b, 0) / arr.length;
+    }
+
+    function recordOutcome(outcome) {
+      outcomesHistory.push(outcome);
+      if (outcomesHistory.length > METRICS_WINDOW) outcomesHistory.shift();
+      saveState();
+    }
+
+    function updateMetrics() {
+      if (!outcomesHistory.length) {
+        metricsEl.textContent = "No completed episodes yet.";
+        return;
+      }
+      const successes = outcomesHistory.filter(o => o.outcome === "goal").length;
+      const traps = outcomesHistory.filter(o => o.outcome === "trap").length;
+      const timeouts = outcomesHistory.filter(o => o.outcome === "timeout").length;
+      const avgSteps = average(outcomesHistory.map(o => o.steps));
+      const windowSize = outcomesHistory.length;
+
+      metricsEl.textContent = `Last ${windowSize} episodes | Success: ${((successes / windowSize) * 100).toFixed(1)}% | Trap hits: ${traps} | Timeouts: ${timeouts} | Avg steps: ${avgSteps.toFixed(1)}`;
     }
 
     function drawArrow(x, y, action) {
@@ -392,6 +464,7 @@
 
       statsEl.textContent =
         `Episode: ${episode} | Epsilon: ${epsilon.toFixed(3)} | Avg reward (last ${rewardsHistory.length}): ${average(rewardsHistory).toFixed(3)}`;
+      updateMetrics();
     }
 
     async function runLearnedPolicy() {
@@ -440,10 +513,12 @@
       epsilon = 0.3;
       episode = 0;
       rewardsHistory = [];
+      outcomesHistory.length = 0;
       stepSession = { active: false, state: null, totalReward: 0, steps: 0 };
       cancelRequested = false;
       statusEl.textContent = "Reset complete.";
       updateLastUpdatePanel(null);
+      localStorage.removeItem(SAVE_KEY);
       draw();
     };
 
@@ -454,6 +529,7 @@
     renderLearningSummary(document.getElementById("explanation"));
     renderMathWalkthrough(document.getElementById("explanation"));
     renderLastUpdatePanel(document.getElementById("explanation"));
+    loadState();
     updateLastUpdatePanel(null);
     draw();
   </script>

@@ -13,6 +13,8 @@ This project is a single-file style reinforcement learning demo for learning ML/
 - Exploration vs exploitation (`epsilon`-greedy).
 - Tabular Q-learning updates over episodes.
 - Live visualization of both behavior and **numeric Q-update math** per step.
+- Rolling quality metrics (success rate, trap hits, timeouts, and average steps).
+- Local persistence of learned Q-table and training progress across page refreshes.
 
 ## Controls
 
@@ -23,6 +25,7 @@ This project is a single-file style reinforcement learning demo for learning ML/
 - **Stop**: interrupt current async run.
 - **Show learning while training**: animate updates instead of fast background training.
 - **Speed**: controls animation delay (intentionally supports very slow playback).
+- **Saved progress**: learning state is auto-saved in browser local storage until reset.
 
 ## Math in the UI
 
