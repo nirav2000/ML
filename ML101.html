@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>RL Gridworld</title>
+  <style>
+    body { font-family: Arial, sans-serif; }
+    canvas { border: 1px solid #333; display: block; margin-bottom: 12px; }
+    button { margin-right: 8px; }
+  </style>
+</head>
+<body>
+  <h2>Q-Learning Gridworld</h2>
+  <canvas id="game" width="500" height="500"></canvas>
+  <div>
+    <button id="train100">Train 100 Episodes</button>
+    <button id="train1000">Train 1000 Episodes</button>
+    <button id="runGreedy">Run Learned Policy</button>
+    <button id="reset">Reset Q-Table</button>
+  </div>
+  <p id="stats"></p>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const statsEl = document.getElementById("stats");
+
+    const GRID_SIZE = 5;
+    const CELL = canvas.width / GRID_SIZE;
+
+    const ACTIONS = ["up", "down", "left", "right"];
+    const START = { x: 0, y: 0 };
+    const GOAL = { x: 4, y: 4 };
+    const TRAPS = [{ x: 3, y: 1 }, { x: 1, y: 3 }];
+
+    const alpha = 0.1;
+    const gamma = 0.95;
+    let epsilon = 0.3;
+    const epsilonDecay = 0.995;
+    const minEpsilon = 0.05;
+
+    let episode = 0;
+    let rewardsHistory = [];
+
+    function stateKey(x, y) {
+      return `${x},${y}`;
+    }
+
+    function createQTable() {
+      const q = {};
+      for (let y = 0; y < GRID_SIZE; y++) {
+        for (let x = 0; x < GRID_SIZE; x++) {
+          q[stateKey(x, y)] = {
+            up: 0,
+            down: 0,
+            left: 0,
+            right: 0
+          };
+        }
+      }
+      return q;
+    }
+
+    let Q = createQTable();
+
+    function isTrap(x, y) {
+      return TRAPS.some(t => t.x === x && t.y === y);
+    }
+
+    function isGoal(x, y) {
+      return x === GOAL.x && y === GOAL.y;
+    }
+
+    function resetEnv() {
+      return { x: START.x, y: START.y };
+    }
+
+    function step(state, action) {
+      let { x, y } = state;
+
+      if (action === "up") y--;
+      if (action === "down") y++;
+      if (action === "left") x--;
+      if (action === "right") x++;
+
+      x = Math.max(0, Math.min(GRID_SIZE - 1, x));
+      y = Math.max(0, Math.min(GRID_SIZE - 1, y));
+
+      let reward = -0.04;
+      let done = false;
+
+      if (isTrap(x, y)) {
+        reward = -1;
+        done = true;
+      } else if (isGoal(x, y)) {
+        reward = 1;
+        done = true;
+      }
+
+      return { nextState: { x, y }, reward, done };
+    }
+
+    function maxQ(state) {
+      const values = Object.values(Q[stateKey(state.x, state.y)]);
+      return Math.max(...values);
+    }
+
+    function bestAction(state) {
+      const qs = Q[stateKey(state.x, state.y)];
+      let best = ACTIONS[0];
+      for (const a of ACTIONS) {
+        if (qs[a] > qs[best]) best = a;
+      }
+      return best;
+    }
+
+    function chooseAction(state) {
+      if (Math.random() < epsilon) {
+        return ACTIONS[Math.floor(Math.random() * ACTIONS.length)];
+      }
+      return bestAction(state);
+    }
+
+    function trainEpisode(maxSteps = 100) {
+      let state = resetEnv();
+      let totalReward = 0;
+
+      for (let i = 0; i < maxSteps; i++) {
+        const action = chooseAction(state);
+        const { nextState, reward, done } = step(state, action);
+
+        const sKey = stateKey(state.x, state.y);
+        const oldQ = Q[sKey][action];
+        const target = reward + gamma * maxQ(nextState);
+        Q[sKey][action] = oldQ + alpha * (target - oldQ);
+
+        totalReward += reward;
+        state = nextState;
+
+        if (done) break;
+      }
+
+      episode++;
+      rewardsHistory.push(totalReward);
+      if (rewardsHistory.length > 100) rewardsHistory.shift();
+
+      epsilon = Math.max(minEpsilon, epsilon * epsilonDecay);
+    }
+
+    function average(arr) {
+      if (!arr.length) return 0;
+      return arr.reduce((a, b) => a + b, 0) / arr.length;
+    }
+
+    function drawArrow(x, y, action) {
+      const cx = x * CELL + CELL / 2;
+      const cy = y * CELL + CELL / 2;
+      const len = CELL * 0.2;
+
+      ctx.beginPath();
+      if (action === "up") {
+        ctx.moveTo(cx, cy - len);
+        ctx.lineTo(cx, cy + len);
+      } else if (action === "down") {
+        ctx.moveTo(cx, cy + len);
+        ctx.lineTo(cx, cy - len);
+      } else if (action === "left") {
+        ctx.moveTo(cx - len, cy);
+        ctx.lineTo(cx + len, cy);
+      } else if (action === "right") {
+        ctx.moveTo(cx + len, cy);
+        ctx.lineTo(cx - len, cy);
+      }
+      ctx.stroke();
+    }
+
+    function draw(agent = null) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let y = 0; y < GRID_SIZE; y++) {
+        for (let x = 0; x < GRID_SIZE; x++) {
+          const px = x * CELL;
+          const py = y * CELL;
+
+          ctx.strokeRect(px, py, CELL, CELL);
+
+          if (x === START.x && y === START.y) {
+            ctx.fillStyle = "#d0e8ff";
+            ctx.fillRect(px, py, CELL, CELL);
+          }
+
+          if (isGoal(x, y)) {
+            ctx.fillStyle = "#b6f5b6";
+            ctx.fillRect(px, py, CELL, CELL);
+          }
+
+          if (isTrap(x, y)) {
+            ctx.fillStyle = "#f5b6b6";
+            ctx.fillRect(px, py, CELL, CELL);
+          }
+
+          ctx.strokeStyle = "#333";
+          drawArrow(x, y, bestAction({ x, y }));
+        }
+      }
+
+      if (agent) {
+        ctx.fillStyle = "#111";
+        ctx.beginPath();
+        ctx.arc(agent.x * CELL + CELL / 2, agent.y * CELL + CELL / 2, CELL * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      statsEl.textContent =
+        `Episode: ${episode} | Epsilon: ${epsilon.toFixed(3)} | Avg reward (last ${rewardsHistory.length}): ${average(rewardsHistory).toFixed(3)}`;
+    }
+
+    async function runLearnedPolicy() {
+      let state = resetEnv();
+      draw(state);
+
+      for (let i = 0; i < 30; i++) {
+        await new Promise(r => setTimeout(r, 300));
+        const action = bestAction(state);
+        const { nextState, done } = step(state, action);
+        state = nextState;
+        draw(state);
+        if (done) break;
+      }
+    }
+
+    document.getElementById("train100").onclick = () => {
+      for (let i = 0; i < 100; i++) trainEpisode();
+      draw();
+    };
+
+    document.getElementById("train1000").onclick = () => {
+      for (let i = 0; i < 1000; i++) trainEpisode();
+      draw();
+    };
+
+    document.getElementById("runGreedy").onclick = runLearnedPolicy;
+
+    document.getElementById("reset").onclick = () => {
+      Q = createQTable();
+      epsilon = 0.3;
+      episode = 0;
+      rewardsHistory = [];
+      draw();
+    };
+
+    draw();
+  </script>
+</body>
+</html>
