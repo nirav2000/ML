@@ -4,26 +4,58 @@
   <meta charset="UTF-8" />
   <title>RL Gridworld</title>
   <style>
-    body { font-family: Arial, sans-serif; }
+    body { font-family: Arial, sans-serif; max-width: 860px; margin: 20px auto; line-height: 1.4; }
     canvas { border: 1px solid #333; display: block; margin-bottom: 12px; }
-    button { margin-right: 8px; }
+    button { margin-right: 8px; margin-bottom: 8px; }
+    .controls { margin-bottom: 8px; }
+    .hint { color: #444; font-size: 0.95rem; margin: 0 0 8px; }
+    .status { color: #222; font-size: 0.95rem; margin: 0 0 8px; }
+    #explanation {
+      margin-top: 14px;
+      padding: 12px;
+      border: 1px solid #d8d8d8;
+      background: #fafafa;
+      border-radius: 8px;
+    }
   </style>
 </head>
 <body>
   <h2>Q-Learning Gridworld</h2>
   <canvas id="game" width="500" height="500"></canvas>
-  <div>
+  <div class="controls">
     <button id="train100">Train 100 Episodes</button>
     <button id="train1000">Train 1000 Episodes</button>
     <button id="runGreedy">Run Learned Policy</button>
     <button id="reset">Reset Q-Table</button>
+    <button id="stop" disabled>Stop</button>
+    <label>
+      <input id="showLearning" type="checkbox" />
+      Show learning while training
+    </label>
+    <label>
+      Speed
+      <input id="visualSpeed" type="range" min="10" max="160" value="45" step="5" />
+    </label>
   </div>
+  <p class="hint">Tip: enable “Show learning while training” to watch the agent and policy arrows update during training.</p>
+  <p id="status" class="status">Idle.</p>
   <p id="stats"></p>
+  <section id="explanation"></section>
 
-  <script>
+  <script type="module">
+    import { renderLearningSummary, renderUpdateRule } from "./ml101-explainer.js";
+
     const canvas = document.getElementById("game");
     const ctx = canvas.getContext("2d");
     const statsEl = document.getElementById("stats");
+    const statusEl = document.getElementById("status");
+    const showLearningEl = document.getElementById("showLearning");
+    const visualSpeedEl = document.getElementById("visualSpeed");
+    const train100Btn = document.getElementById("train100");
+    const train1000Btn = document.getElementById("train1000");
+    const runGreedyBtn = document.getElementById("runGreedy");
+    const resetBtn = document.getElementById("reset");
+    const stopBtn = document.getElementById("stop");
 
     const GRID_SIZE = 5;
     const CELL = canvas.width / GRID_SIZE;
@@ -41,6 +73,12 @@
 
     let episode = 0;
     let rewardsHistory = [];
+    let busy = false;
+    let cancelRequested = false;
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
 
     function stateKey(x, y) {
       return `${x},${y}`;
@@ -121,9 +159,18 @@
       return bestAction(state);
     }
 
-    function trainEpisode(maxSteps = 100) {
+    function setControlsDisabled(disabled) {
+      train100Btn.disabled = disabled;
+      train1000Btn.disabled = disabled;
+      runGreedyBtn.disabled = disabled;
+      resetBtn.disabled = disabled;
+      stopBtn.disabled = !disabled;
+    }
+
+    async function trainEpisode(maxSteps = 100, visualize = false) {
       let state = resetEnv();
       let totalReward = 0;
+      let steps = 0;
 
       for (let i = 0; i < maxSteps; i++) {
         const action = chooseAction(state);
@@ -131,11 +178,19 @@
 
         const sKey = stateKey(state.x, state.y);
         const oldQ = Q[sKey][action];
-        const target = reward + gamma * maxQ(nextState);
+        const nextEstimate = done ? 0 : gamma * maxQ(nextState);
+        const target = reward + nextEstimate;
         Q[sKey][action] = oldQ + alpha * (target - oldQ);
 
         totalReward += reward;
         state = nextState;
+        steps = i + 1;
+
+        if (visualize) {
+          draw(state);
+          statusEl.textContent = `Training episode ${episode + 1}: step ${steps}/${maxSteps}`;
+          await sleep(Number(visualSpeedEl.value));
+        }
 
         if (done) break;
       }
@@ -145,6 +200,35 @@
       if (rewardsHistory.length > 100) rewardsHistory.shift();
 
       epsilon = Math.max(minEpsilon, epsilon * epsilonDecay);
+      return { totalReward, steps };
+    }
+
+    async function trainEpisodes(count) {
+      if (busy) return;
+      busy = true;
+      setControlsDisabled(true);
+
+      const visualize = showLearningEl.checked;
+      cancelRequested = false;
+
+      try {
+        for (let i = 0; i < count; i++) {
+          if (cancelRequested) break;
+          await trainEpisode(100, visualize);
+          if (visualize) {
+            draw();
+            await sleep(Math.max(10, Number(visualSpeedEl.value) - 10));
+          }
+        }
+
+        statusEl.textContent = cancelRequested
+          ? "Training stopped by user."
+          : `Completed training for ${count} episodes.`;
+      } finally {
+        draw();
+        setControlsDisabled(false);
+        busy = false;
+      }
     }
 
     function average(arr) {
@@ -216,39 +300,53 @@
     }
 
     async function runLearnedPolicy() {
+      if (busy) return;
+      setControlsDisabled(true);
+      cancelRequested = false;
+      statusEl.textContent = "Running greedy policy.";
+
       let state = resetEnv();
       draw(state);
 
-      for (let i = 0; i < 30; i++) {
-        await new Promise(r => setTimeout(r, 300));
-        const action = bestAction(state);
-        const { nextState, done } = step(state, action);
-        state = nextState;
-        draw(state);
-        if (done) break;
+      try {
+        for (let i = 0; i < 30; i++) {
+          if (cancelRequested) break;
+          await sleep(300);
+          const action = bestAction(state);
+          const { nextState, done } = step(state, action);
+          state = nextState;
+          draw(state);
+          if (done) break;
+        }
+
+        statusEl.textContent = cancelRequested ? "Greedy run stopped by user." : "Greedy run completed.";
+      } finally {
+        setControlsDisabled(false);
       }
     }
 
-    document.getElementById("train100").onclick = () => {
-      for (let i = 0; i < 100; i++) trainEpisode();
-      draw();
+    train100Btn.onclick = () => trainEpisodes(100);
+    train1000Btn.onclick = () => trainEpisodes(1000);
+    runGreedyBtn.onclick = runLearnedPolicy;
+    stopBtn.onclick = () => {
+      if (!busy) return;
+      cancelRequested = true;
+      statusEl.textContent = "Stopping…";
     };
 
-    document.getElementById("train1000").onclick = () => {
-      for (let i = 0; i < 1000; i++) trainEpisode();
-      draw();
-    };
-
-    document.getElementById("runGreedy").onclick = runLearnedPolicy;
-
-    document.getElementById("reset").onclick = () => {
+    resetBtn.onclick = () => {
+      if (busy) return;
       Q = createQTable();
       epsilon = 0.3;
       episode = 0;
       rewardsHistory = [];
+      cancelRequested = false;
+      statusEl.textContent = "Reset complete.";
       draw();
     };
 
+    renderLearningSummary(document.getElementById("explanation"));
+    renderUpdateRule(document.getElementById("explanation"));
     draw();
   </script>
 </body>
