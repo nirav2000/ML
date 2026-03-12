@@ -49,9 +49,9 @@ Grid size, trap layout, and α/γ/ε behavior are hardcoded. That constrains exp
 7. **Optional charts:** Add a tiny reward/episode sparkline for quick trend inspection.
 
 ## Suggested acceptance checklist for next iteration
-- [ ] Learner state survives browser refresh.
-- [ ] Metrics panel includes success rate and episode length trend.
+- [x] Learner state survives browser refresh.
+- [x] Metrics panel includes success rate and episode length trend.
 - [ ] Core logic is split into at least `env`, `agent`, and `ui` modules.
 - [ ] Keyboard-only training flow is usable.
-- [ ] Hyperparameter controls include validation and reset-to-defaults.
+- [x] Hyperparameter controls include validation and reset-to-defaults.
 

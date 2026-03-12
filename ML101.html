@@ -27,6 +27,11 @@
     canvas { border: 1px solid #333; display: block; margin-bottom: 12px; }
     button { margin-right: 8px; margin-bottom: 8px; }
     .controls { margin-bottom: 8px; }
+    .params { margin: 6px 0 10px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; }
+    .params legend { font-weight: 600; }
+    .params-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+    .params label { display: flex; flex-direction: column; font-size: 0.86rem; }
+    .params input[type="number"] { width: 82px; }
     .hint { color: #444; font-size: 0.95rem; margin: 0 0 8px; }
     .status { color: #222; font-size: 0.95rem; margin: 0 0 8px; }
     #metrics {
@@ -98,6 +103,18 @@
           <span id="speedLabel">650ms</span>
         </label>
       </div>
+      <fieldset class="params" aria-label="Q-learning hyperparameters">
+        <legend>Hyperparameters</legend>
+        <div class="params-row">
+          <label>alpha <input id="alphaInput" type="number" min="0.01" max="1" step="0.01" value="0.1" /></label>
+          <label>gamma <input id="gammaInput" type="number" min="0" max="1" step="0.01" value="0.95" /></label>
+          <label>epsilon start <input id="epsStartInput" type="number" min="0" max="1" step="0.01" value="0.3" /></label>
+          <label>epsilon decay <input id="epsDecayInput" type="number" min="0.9" max="1" step="0.001" value="0.995" /></label>
+          <label>epsilon min <input id="epsMinInput" type="number" min="0" max="1" step="0.01" value="0.05" /></label>
+          <button id="applyParams" type="button">Apply</button>
+          <button id="resetParams" type="button">Reset Defaults</button>
+        </div>
+      </fieldset>
       <p class="hint">Tip: use <strong>Step Training Move</strong> for one update at a time, or enable live mode to watch full episodes.</p>
       <p id="status" class="status" aria-live="polite">Idle.</p>
       <div id="metrics" aria-live="polite">No completed episodes yet.</div>
@@ -108,7 +125,7 @@
   </div>
 
   <footer>
-    <span>App version: </span><button id="versionBtn" type="button" aria-label="Show version update history">v0.0.5</button>
+    <span>App version: </span><button id="versionBtn" type="button" aria-label="Show version update history">v0.1.0</button>
   </footer>
 
   <dialog id="versionDialog">
@@ -136,6 +153,13 @@
     const runGreedyBtn = document.getElementById("runGreedy");
     const resetBtn = document.getElementById("reset");
     const stopBtn = document.getElementById("stop");
+    const alphaInput = document.getElementById("alphaInput");
+    const gammaInput = document.getElementById("gammaInput");
+    const epsStartInput = document.getElementById("epsStartInput");
+    const epsDecayInput = document.getElementById("epsDecayInput");
+    const epsMinInput = document.getElementById("epsMinInput");
+    const applyParamsBtn = document.getElementById("applyParams");
+    const resetParamsBtn = document.getElementById("resetParams");
     const versionBtn = document.getElementById("versionBtn");
     const versionDialog = document.getElementById("versionDialog");
     const versionContentEl = document.getElementById("versionContent");
@@ -148,11 +172,13 @@
     const GOAL = { x: 4, y: 4 };
     const TRAPS = [{ x: 3, y: 1 }, { x: 1, y: 3 }];
 
-    const alpha = 0.1;
-    const gamma = 0.95;
-    let epsilon = 0.3;
-    const epsilonDecay = 0.995;
-    const minEpsilon = 0.05;
+    const defaultParams = { alpha: 0.1, gamma: 0.95, epsilonStart: 0.3, epsilonDecay: 0.995, minEpsilon: 0.05 };
+    let alpha = defaultParams.alpha;
+    let gamma = defaultParams.gamma;
+    let epsilonStart = defaultParams.epsilonStart;
+    let epsilon = defaultParams.epsilonStart;
+    let epsilonDecay = defaultParams.epsilonDecay;
+    let minEpsilon = defaultParams.minEpsilon;
 
     let episode = 0;
     let rewardsHistory = [];
@@ -176,7 +202,7 @@
     }
 
     function saveState() {
-      const state = { Q, epsilon, episode, rewardsHistory, outcomesHistory };
+      const state = { Q, epsilon, epsilonStart, epsilonDecay, minEpsilon, alpha, gamma, episode, rewardsHistory, outcomesHistory };
       localStorage.setItem(SAVE_KEY, JSON.stringify(state));
     }
 
@@ -189,6 +215,11 @@
 
         Q = parsed.Q;
         epsilon = Number.isFinite(parsed.epsilon) ? parsed.epsilon : epsilon;
+        alpha = Number.isFinite(parsed.alpha) ? parsed.alpha : alpha;
+        gamma = Number.isFinite(parsed.gamma) ? parsed.gamma : gamma;
+        epsilonStart = Number.isFinite(parsed.epsilonStart) ? parsed.epsilonStart : epsilonStart;
+        epsilonDecay = Number.isFinite(parsed.epsilonDecay) ? parsed.epsilonDecay : epsilonDecay;
+        minEpsilon = Number.isFinite(parsed.minEpsilon) ? parsed.minEpsilon : minEpsilon;
         episode = Number.isFinite(parsed.episode) ? parsed.episode : episode;
         rewardsHistory = Array.isArray(parsed.rewardsHistory) ? parsed.rewardsHistory.slice(-100) : [];
         if (Array.isArray(parsed.outcomesHistory)) {
@@ -209,6 +240,62 @@
       } catch {
         versionContentEl.textContent = "Unable to load version history right now.";
       }
+    }
+
+    function syncParamInputs() {
+      alphaInput.value = String(alpha);
+      gammaInput.value = String(gamma);
+      epsStartInput.value = String(epsilonStart);
+      epsDecayInput.value = String(epsilonDecay);
+      epsMinInput.value = String(minEpsilon);
+    }
+
+    function validateParams(candidate) {
+      const inRange = (v, lo, hi) => Number.isFinite(v) && v >= lo && v <= hi;
+      if (!inRange(candidate.alpha, 0.01, 1)) return "alpha must be between 0.01 and 1.";
+      if (!inRange(candidate.gamma, 0, 1)) return "gamma must be between 0 and 1.";
+      if (!inRange(candidate.epsilonStart, 0, 1)) return "epsilon start must be between 0 and 1.";
+      if (!inRange(candidate.epsilonDecay, 0.9, 1)) return "epsilon decay must be between 0.9 and 1.";
+      if (!inRange(candidate.minEpsilon, 0, 1)) return "epsilon min must be between 0 and 1.";
+      if (candidate.minEpsilon > candidate.epsilonStart) return "epsilon min cannot be greater than epsilon start.";
+      return null;
+    }
+
+    function applyParamsFromInputs() {
+      const candidate = {
+        alpha: Number(alphaInput.value),
+        gamma: Number(gammaInput.value),
+        epsilonStart: Number(epsStartInput.value),
+        epsilonDecay: Number(epsDecayInput.value),
+        minEpsilon: Number(epsMinInput.value)
+      };
+      const error = validateParams(candidate);
+      if (error) {
+        statusEl.textContent = `Hyperparameter error: ${error}`;
+        return;
+      }
+      alpha = candidate.alpha;
+      gamma = candidate.gamma;
+      epsilonStart = candidate.epsilonStart;
+      epsilonDecay = candidate.epsilonDecay;
+      minEpsilon = candidate.minEpsilon;
+      epsilon = Math.min(Math.max(epsilon, minEpsilon), epsilonStart);
+      statusEl.textContent = "Hyperparameters applied.";
+      saveState();
+      draw();
+    }
+
+    function resetHyperparameters() {
+      alpha = defaultParams.alpha;
+      gamma = defaultParams.gamma;
+      epsilonStart = defaultParams.epsilonStart;
+      epsilonDecay = defaultParams.epsilonDecay;
+      minEpsilon = defaultParams.minEpsilon;
+      epsilon = epsilonStart;
+      syncParamInputs();
+      statusEl.textContent = "Hyperparameters reset to defaults.";
+      saveState();
+      draw();
     }
 
     function stateKey(x, y) {
@@ -291,6 +378,8 @@
       stepMoveBtn.disabled = disabled;
       runGreedyBtn.disabled = disabled;
       resetBtn.disabled = disabled;
+      applyParamsBtn.disabled = disabled;
+      resetParamsBtn.disabled = disabled;
       stopBtn.disabled = !disabled;
     }
 
@@ -512,7 +601,7 @@
       }
 
       statsEl.textContent =
-        `Episode: ${episode} | Epsilon: ${epsilon.toFixed(3)} | Avg reward (last ${rewardsHistory.length}): ${average(rewardsHistory).toFixed(3)}`;
+        `Episode: ${episode} | Epsilon: ${epsilon.toFixed(3)} | alpha: ${alpha.toFixed(2)} | gamma: ${gamma.toFixed(2)} | decay: ${epsilonDecay.toFixed(3)} | Avg reward (last ${rewardsHistory.length}): ${average(rewardsHistory).toFixed(3)}`;
       updateMetrics();
     }
 
@@ -559,7 +648,7 @@
     resetBtn.onclick = () => {
       if (busy) return;
       Q = createQTable();
-      epsilon = 0.3;
+      epsilon = epsilonStart;
       episode = 0;
       rewardsHistory = [];
       outcomesHistory.length = 0;
@@ -576,11 +665,14 @@
     };
 
     versionBtn.onclick = showVersionHistory;
+    applyParamsBtn.onclick = applyParamsFromInputs;
+    resetParamsBtn.onclick = resetHyperparameters;
 
     renderLastUpdatePanel(document.getElementById("explanation"));
     renderLearningSummary(document.getElementById("explanation"));
     renderMathWalkthrough(document.getElementById("explanation"));
     loadState();
+    syncParamInputs();
     updateLastUpdatePanel(null);
     draw();
   </script>
