@@ -26,6 +26,7 @@ This project is a single-file style reinforcement learning demo for learning ML/
 - **Show learning while training**: animate updates instead of fast background training.
 - **Speed**: controls animation delay (intentionally supports very slow playback).
 - **Saved progress**: learning state is auto-saved in browser local storage until reset.
+- **Version footer**: click the version number at the bottom of the page to view the markdown change history.
 
 ## Math in the UI
 

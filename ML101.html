@@ -37,6 +37,27 @@
       background: #fcfcfc;
       font-size: 0.92rem;
     }
+    footer { margin-top: 16px; color: #555; font-size: 0.9rem; }
+    #versionBtn {
+      border: none;
+      background: none;
+      color: #0b57d0;
+      text-decoration: underline;
+      cursor: pointer;
+      padding: 0;
+      font: inherit;
+    }
+    #versionDialog { width: min(760px, 92vw); }
+    #versionDialog pre {
+      white-space: pre-wrap;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: #fafafa;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 10px;
+      max-height: 50vh;
+      overflow: auto;
+    }
     #explanation {
       padding: 12px;
       border: 1px solid #d8d8d8;
@@ -86,6 +107,18 @@
     <aside class="right" id="explanation"></aside>
   </div>
 
+  <footer>
+    <span>App version: </span><button id="versionBtn" type="button" aria-label="Show version update history">v0.0.5</button>
+  </footer>
+
+  <dialog id="versionDialog">
+    <h3>Version update history</h3>
+    <pre id="versionContent">Loading version history…</pre>
+    <form method="dialog">
+      <button type="submit">Close</button>
+    </form>
+  </dialog>
+
   <script type="module">
     import { renderLearningSummary, renderMathWalkthrough, renderLastUpdatePanel, updateLastUpdatePanel } from "./ml101-explainer.js";
 
@@ -103,6 +136,9 @@
     const runGreedyBtn = document.getElementById("runGreedy");
     const resetBtn = document.getElementById("reset");
     const stopBtn = document.getElementById("stop");
+    const versionBtn = document.getElementById("versionBtn");
+    const versionDialog = document.getElementById("versionDialog");
+    const versionContentEl = document.getElementById("versionContent");
 
     const GRID_SIZE = 5;
     const CELL = canvas.width / GRID_SIZE;
@@ -126,6 +162,7 @@
     let cancelRequested = false;
 
     const SAVE_KEY = "ml101-qlearning-state-v1";
+    const VERSION_HISTORY_FILE = "./VERSION_HISTORY.md";
 
     let stepSession = {
       active: false,
@@ -159,6 +196,18 @@
         }
       } catch {
         statusEl.textContent = "Could not load saved state. Starting fresh.";
+      }
+    }
+
+    async function showVersionHistory() {
+      if (!versionDialog) return;
+      versionDialog.showModal();
+      try {
+        const resp = await fetch(VERSION_HISTORY_FILE, { cache: "no-store" });
+        if (!resp.ok) throw new Error(`Failed to load ${VERSION_HISTORY_FILE}`);
+        versionContentEl.textContent = await resp.text();
+      } catch {
+        versionContentEl.textContent = "Unable to load version history right now.";
       }
     }
 
@@ -526,9 +575,11 @@
       speedLabelEl.textContent = `${visualSpeedEl.value}ms`;
     };
 
+    versionBtn.onclick = showVersionHistory;
+
+    renderLastUpdatePanel(document.getElementById("explanation"));
     renderLearningSummary(document.getElementById("explanation"));
     renderMathWalkthrough(document.getElementById("explanation"));
-    renderLastUpdatePanel(document.getElementById("explanation"));
     loadState();
     updateLastUpdatePanel(null);
     draw();
