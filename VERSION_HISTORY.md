@@ -1,5 +1,10 @@
 # ML101 App Version History
 
+## v0.1.2
+- Fixed rendering order bug so the **Last Q-update (live)** panel is not overwritten by other explainer sections.
+- Highlighted the live-update panel in yellow and stronger border so it is immediately visible.
+- Added a move-by-move one-line trace list so each Q update can be followed step-by-step for faster learning.
+
 ## v0.1.1
 - Pinned the **Last Q-update (live)** panel at the top-right explanation column so it stays visible while reading other info.
 - Added sticky styling to keep live update details prominent next to the grid.

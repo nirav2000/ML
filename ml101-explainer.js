@@ -12,17 +12,21 @@ export const learningSummary = {
 };
 
 let lastUpdateEl = null;
+let updateHistoryEl = null;
 
 export function renderLearningSummary(targetEl) {
   if (!targetEl) return;
 
-  targetEl.innerHTML = `
+  const section = document.createElement("section");
+  section.innerHTML = `
     <h3>${learningSummary.title}</h3>
     <ul>
       ${learningSummary.bullets.map((item) => `<li>${item}</li>`).join("")}
     </ul>
     <p><strong>Why it matters:</strong> ${learningSummary.meaning}</p>
   `;
+
+  targetEl.appendChild(section);
 }
 
 export function renderMathWalkthrough(targetEl) {
@@ -53,10 +57,13 @@ export function renderLastUpdatePanel(targetEl) {
   section.innerHTML = `
     <h3>Last Q-update (live)</h3>
     <div id="lastUpdate"></div>
+    <h4>Move-by-move trace (one line each)</h4>
+    <div id="updateHistory"></div>
   `;
 
   targetEl.appendChild(section);
   lastUpdateEl = section.querySelector("#lastUpdate");
+  updateHistoryEl = section.querySelector("#updateHistory");
 }
 
 export function updateLastUpdatePanel(data) {
@@ -64,6 +71,7 @@ export function updateLastUpdatePanel(data) {
 
   if (!data) {
     lastUpdateEl.textContent = "No updates yet. Start training or click Step Training Move.";
+    if (updateHistoryEl) updateHistoryEl.textContent = "(Move trace will appear here.)";
     return;
   }
 
@@ -82,4 +90,24 @@ export function updateLastUpdatePanel(data) {
     "",
     `alpha=${data.alpha}, gamma=${data.gamma}`
   ].join("\n");
+
+  if (!updateHistoryEl) return;
+  const summary = [
+    `s=(${data.state.x},${data.state.y})`,
+    `a=${data.action}`,
+    `r=${data.reward.toFixed(2)}`,
+    `s' =(${data.nextState.x},${data.nextState.y})`,
+    `target=${data.target.toFixed(3)}`,
+    `newQ=${data.newQ.toFixed(3)}`,
+    data.done ? "terminal" : "continue"
+  ].join(" | ");
+
+  const line = document.createElement("div");
+  line.textContent = summary;
+  updateHistoryEl.prepend(line);
+
+  while (updateHistoryEl.childElementCount > 14) {
+    updateHistoryEl.removeChild(updateHistoryEl.lastElementChild);
+  }
+
 }
