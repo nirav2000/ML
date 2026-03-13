@@ -28,6 +28,7 @@ This project is a single-file style reinforcement learning demo for learning ML/
 - **Saved progress**: learning state is auto-saved in browser local storage until reset.
 - **Hyperparameters**: adjust alpha/gamma/epsilon-start/decay/min, apply with validation, or reset to defaults.
 - **Version footer**: click the version number at the bottom of the page to view the markdown change history.
+- **Pinned live update**: the Last Q-update panel stays pinned at the top of the right column for constant visibility.
 
 ## Math in the UI
 

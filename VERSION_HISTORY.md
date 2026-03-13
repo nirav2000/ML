@@ -1,5 +1,9 @@
 # ML101 App Version History
 
+## v0.1.1
+- Pinned the **Last Q-update (live)** panel at the top-right explanation column so it stays visible while reading other info.
+- Added sticky styling to keep live update details prominent next to the grid.
+
 ## v0.1.0
 - Implemented APP_REVIEW medium-priority recommendation #4: exposed core hyperparameters in the UI (alpha, gamma, epsilon start/decay/min).
 - Added validation guardrails and an explicit reset-to-defaults action for hyperparameters.

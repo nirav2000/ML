@@ -49,6 +49,7 @@ export function renderLastUpdatePanel(targetEl) {
   if (!targetEl) return;
 
   const section = document.createElement("section");
+  section.id = "lastUpdateSection";
   section.innerHTML = `
     <h3>Last Q-update (live)</h3>
     <div id="lastUpdate"></div>
