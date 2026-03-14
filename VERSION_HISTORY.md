@@ -1,5 +1,10 @@
 # ML101 App Version History
 
+## v0.1.3
+- Added clickable version navigation inside the Version History dialog to move back and forth between releases.
+- The dialog now always loads the latest `VERSION_HISTORY.md` on open, regardless of current app version.
+- The current active app version is clearly marked and highlighted in the version list.
+
 ## v0.1.2
 - Fixed rendering order bug so the **Last Q-update (live)** panel is not overwritten by other explainer sections.
 - Highlighted the live-update panel in yellow and stronger border so it is immediately visible.

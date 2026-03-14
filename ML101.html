@@ -53,7 +53,19 @@
       font: inherit;
     }
     #versionDialog { width: min(760px, 92vw); }
-    #versionDialog pre {
+    #versionDialog .version-layout { display: grid; grid-template-columns: 220px 1fr; gap: 10px; }
+    #versionList {
+      border: 1px solid #ddd; border-radius: 6px; padding: 8px;
+      max-height: 50vh; overflow: auto; background: #fff;
+    }
+    #versionList button {
+      width: 100%; text-align: left; margin: 0 0 6px; padding: 6px 8px;
+      border: 1px solid #ddd; border-radius: 6px; background: #f8f8f8; cursor: pointer;
+    }
+    #versionList button.current { border-color: #0b57d0; background: #eaf2ff; font-weight: 600; }
+    #versionList button.viewing { outline: 2px solid #d4a017; }
+    .version-badge { font-size: 0.72rem; color: #0b57d0; margin-left: 6px; }
+    #versionDetails {
       white-space: pre-wrap;
       font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
       background: #fafafa;
@@ -62,6 +74,9 @@
       padding: 10px;
       max-height: 50vh;
       overflow: auto;
+    }
+    @media (max-width: 900px) {
+      #versionDialog .version-layout { grid-template-columns: 1fr; }
     }
     #explanation {
       padding: 12px;
@@ -152,12 +167,15 @@
   </div>
 
   <footer>
-    <span>App version: </span><button id="versionBtn" type="button" aria-label="Show version update history">v0.1.2</button>
+    <span>App version: </span><button id="versionBtn" type="button" aria-label="Show version update history">v0.1.3</button>
   </footer>
 
   <dialog id="versionDialog">
     <h3>Version update history</h3>
-    <pre id="versionContent">Loading version history…</pre>
+    <div class="version-layout">
+      <div id="versionList" aria-label="Version list"></div>
+      <div id="versionDetails" aria-live="polite">Loading version history…</div>
+    </div>
     <form method="dialog">
       <button type="submit">Close</button>
     </form>
@@ -189,7 +207,8 @@
     const resetParamsBtn = document.getElementById("resetParams");
     const versionBtn = document.getElementById("versionBtn");
     const versionDialog = document.getElementById("versionDialog");
-    const versionContentEl = document.getElementById("versionContent");
+    const versionListEl = document.getElementById("versionList");
+    const versionDetailsEl = document.getElementById("versionDetails");
 
     const GRID_SIZE = 5;
     const CELL = canvas.width / GRID_SIZE;
@@ -216,6 +235,9 @@
 
     const SAVE_KEY = "ml101-qlearning-state-v1";
     const VERSION_HISTORY_FILE = "./VERSION_HISTORY.md";
+    const ACTIVE_VERSION = versionBtn.textContent.trim();
+    let historyEntries = [];
+    let selectedVersion = ACTIVE_VERSION;
 
     let stepSession = {
       active: false,
@@ -257,15 +279,83 @@
       }
     }
 
+    function parseVersionHistory(markdownText) {
+      const lines = markdownText.split(/?
+/);
+      const entries = [];
+      let current = null;
+
+      for (const rawLine of lines) {
+        const line = rawLine.trim();
+        const match = line.match(/^##\s+(v\d+\.\d+\.\d+)/i);
+        if (match) {
+          if (current) entries.push(current);
+          current = { version: match[1], notes: [] };
+          continue;
+        }
+        if (!current) continue;
+        if (line.startsWith("- ")) current.notes.push(line.slice(2));
+      }
+      if (current) entries.push(current);
+      return entries;
+    }
+
+    function renderVersionDetails(version) {
+      const entry = historyEntries.find(item => item.version === version);
+      if (!entry) {
+        versionDetailsEl.textContent = "No details available for this version.";
+        return;
+      }
+      const activeMark = version === ACTIVE_VERSION ? " (active)" : "";
+      const notes = entry.notes.length ? entry.notes.map(note => `- ${note}`).join("
+") : "- No notes recorded.";
+      versionDetailsEl.textContent = `${entry.version}${activeMark}
+
+${notes}`;
+    }
+
+    function renderVersionList() {
+      if (!historyEntries.length) {
+        versionListEl.textContent = "No version entries found.";
+        return;
+      }
+      versionListEl.innerHTML = "";
+      for (const entry of historyEntries) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.dataset.version = entry.version;
+        btn.className = [
+          entry.version === ACTIVE_VERSION ? "current" : "",
+          entry.version === selectedVersion ? "viewing" : ""
+        ].filter(Boolean).join(" ");
+        btn.textContent = entry.version;
+        if (entry.version === ACTIVE_VERSION) {
+          const badge = document.createElement("span");
+          badge.className = "version-badge";
+          badge.textContent = "active";
+          btn.appendChild(badge);
+        }
+        versionListEl.appendChild(btn);
+      }
+    }
+
     async function showVersionHistory() {
       if (!versionDialog) return;
       versionDialog.showModal();
+      versionDetailsEl.textContent = "Loading version history…";
+      versionListEl.textContent = "Loading…";
       try {
         const resp = await fetch(VERSION_HISTORY_FILE, { cache: "no-store" });
         if (!resp.ok) throw new Error(`Failed to load ${VERSION_HISTORY_FILE}`);
-        versionContentEl.textContent = await resp.text();
+        historyEntries = parseVersionHistory(await resp.text());
+        selectedVersion = historyEntries.some(e => e.version === ACTIVE_VERSION)
+          ? ACTIVE_VERSION
+          : (historyEntries[0]?.version ?? ACTIVE_VERSION);
+        renderVersionList();
+        renderVersionDetails(selectedVersion);
       } catch {
-        versionContentEl.textContent = "Unable to load version history right now.";
+        versionListEl.textContent = "Unable to load version list.";
+        versionDetailsEl.textContent = "Unable to load version history right now.";
       }
     }
 
@@ -692,6 +782,13 @@
     };
 
     versionBtn.onclick = showVersionHistory;
+    versionListEl.onclick = (event) => {
+      const target = event.target.closest("button[data-version]");
+      if (!target) return;
+      selectedVersion = target.dataset.version;
+      renderVersionList();
+      renderVersionDetails(selectedVersion);
+    };
     applyParamsBtn.onclick = applyParamsFromInputs;
     resetParamsBtn.onclick = resetHyperparameters;
 
