@@ -1,0 +1,1039 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>RL Gridworld</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1200px;
+      margin: 20px auto;
+      line-height: 1.4;
+      padding: 0 12px;
+    }
+    .layout {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+    .left {
+      flex: 0 0 520px;
+    }
+    .right {
+      flex: 1;
+      min-width: 320px;
+    }
+    canvas { border: 1px solid #333; display: block; margin-bottom: 12px; }
+    button { margin-right: 8px; margin-bottom: 8px; }
+    .controls { margin-bottom: 8px; }
+    .params { margin: 6px 0 10px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; }
+    .params legend { font-weight: 600; }
+    .params-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+    .params label { display: flex; flex-direction: column; font-size: 0.86rem; }
+    .params input[type="number"] { width: 82px; }
+    .hint { color: #444; font-size: 0.95rem; margin: 0 0 8px; }
+    .status { color: #222; font-size: 0.95rem; margin: 0 0 8px; }
+    #metrics {
+      margin: 0 0 10px;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      background: #fcfcfc;
+      font-size: 0.92rem;
+    }
+    footer { margin-top: 16px; color: #555; font-size: 0.9rem; }
+    #versionBtn {
+      border: none;
+      background: none;
+      color: #0b57d0;
+      text-decoration: underline;
+      cursor: pointer;
+      padding: 0;
+      font: inherit;
+    }
+    #versionDialog { width: min(760px, 92vw); }
+    #versionDialog .version-layout { display: grid; grid-template-columns: 220px 1fr; gap: 10px; }
+    #versionList {
+      border: 1px solid #ddd; border-radius: 6px; padding: 8px;
+      max-height: 50vh; overflow: auto; background: #fff;
+    }
+    #versionList button {
+      width: 100%; text-align: left; margin: 0 0 6px; padding: 6px 8px;
+      border: 1px solid #ddd; border-radius: 6px; background: #f8f8f8; cursor: pointer;
+    }
+    #versionList button.current { border-color: #0b57d0; background: #eaf2ff; font-weight: 600; }
+    #versionList button.viewing { outline: 2px solid #d4a017; }
+    .version-badge { font-size: 0.72rem; color: #0b57d0; margin-left: 6px; }
+    #versionDetails {
+      white-space: pre-wrap;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: #fafafa;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 10px;
+      max-height: 50vh;
+      overflow: auto;
+    }
+    @media (max-width: 900px) {
+      #versionDialog .version-layout { grid-template-columns: 1fr; }
+    }
+    #explanation {
+      padding: 12px;
+      border: 1px solid #d8d8d8;
+      background: #fafafa;
+      border-radius: 8px;
+    }
+    #lastUpdateSection {
+      position: sticky;
+      top: 10px;
+      background: #fff3b0;
+      z-index: 2;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 2px solid #d4a017;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    }
+    #lastUpdateSection h3 { margin: 0 0 6px; }
+    #lastUpdate {
+      margin-top: 8px;
+      padding: 8px;
+      background: #fff;
+      border: 1px solid #d4a017;
+      border-radius: 6px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      white-space: pre-wrap;
+    }
+    #updateHistory {
+      margin-top: 8px;
+      max-height: 150px;
+      overflow: auto;
+      background: #fff9db;
+      border: 1px solid #e0c25d;
+      border-radius: 6px;
+      padding: 6px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.82rem;
+    }
+    #updateHistory > div {
+      border-bottom: 1px dashed #e7d48a;
+      padding: 3px 0;
+    }
+
+    #debugTools {
+      margin-top: 10px;
+      border: 1px solid #d0d0d0;
+      border-radius: 8px;
+      background: #f7f7f7;
+      padding: 8px;
+    }
+    #debugTools summary { cursor: pointer; font-weight: 600; }
+    .debug-actions { margin: 8px 0; display: flex; flex-wrap: wrap; gap: 8px; }
+    #debugOutput {
+      margin: 0;
+      max-height: 180px;
+      overflow: auto;
+      white-space: pre-wrap;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.78rem;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 8px;
+    }
+  </style>
+</head>
+<body>
+  <h2>Q-Learning Gridworld</h2>
+
+  <div class="layout">
+    <div class="left">
+      <canvas id="game" width="500" height="500"></canvas>
+      <div class="controls">
+        <button id="train100">Train 100 Episodes</button>
+        <button id="train1000">Train 1000 Episodes</button>
+        <button id="stepMove">Step Training Move</button>
+        <button id="runGreedy">Run Learned Policy</button>
+        <button id="reset">Reset Q-Table</button>
+        <button id="stop" disabled>Stop</button>
+        <label>
+          <input id="showLearning" type="checkbox" />
+          Show learning while training
+        </label>
+        <label>
+          Speed
+          <input id="visualSpeed" type="range" min="120" max="2000" value="650" step="40" />
+          <span id="speedLabel">650ms</span>
+        </label>
+      </div>
+      <fieldset class="params" aria-label="Q-learning hyperparameters">
+        <legend>Hyperparameters</legend>
+        <div class="params-row">
+          <label>alpha <input id="alphaInput" type="number" min="0.01" max="1" step="0.01" value="0.1" /></label>
+          <label>gamma <input id="gammaInput" type="number" min="0" max="1" step="0.01" value="0.95" /></label>
+          <label>epsilon start <input id="epsStartInput" type="number" min="0" max="1" step="0.01" value="0.3" /></label>
+          <label>epsilon decay <input id="epsDecayInput" type="number" min="0.9" max="1" step="0.001" value="0.995" /></label>
+          <label>epsilon min <input id="epsMinInput" type="number" min="0" max="1" step="0.01" value="0.05" /></label>
+          <button id="applyParams" type="button">Apply</button>
+          <button id="resetParams" type="button">Reset Defaults</button>
+        </div>
+      </fieldset>
+      <p class="hint">Tip: use <strong>Step Training Move</strong> for one update at a time, or enable live mode to watch full episodes.</p>
+      <p id="status" class="status" aria-live="polite">Idle.</p>
+      <div id="metrics" aria-live="polite">No completed episodes yet.</div>
+      <p id="stats"></p>
+
+      <details id="debugTools">
+        <summary>iPad-friendly debug tools</summary>
+        <div class="debug-actions">
+          <button id="debugRefresh" type="button">Refresh device snapshot</button>
+          <button id="debugTestModule" type="button">Test ml101-explainer.js load</button>
+          <button id="debugCopy" type="button">Copy debug report</button>
+          <button id="debugSelfCheck" type="button">Run self-check</button>
+          <button id="debugClear" type="button">Clear debug log</button>
+        </div>
+        <pre id="debugOutput">Debug output will appear here.</pre>
+      </details>
+    </div>
+
+    <aside class="right" id="explanation"></aside>
+  </div>
+
+  <footer>
+    <span>App version: </span><button id="versionBtn" type="button" aria-label="Show version update history">v0.1.6</button>
+  </footer>
+
+  <dialog id="versionDialog">
+    <h3>Version update history</h3>
+    <div class="version-layout">
+      <div id="versionList" aria-label="Version list"></div>
+      <div id="versionDetails" aria-live="polite">Loading version history…</div>
+    </div>
+    <form method="dialog">
+      <button type="submit">Close</button>
+    </form>
+  </dialog>
+
+  <script type="module">
+    const learningSummary = {
+      title: "What this demo is showing",
+      bullets: [
+        "The agent starts with no idea which move is good.",
+        "Each action gives a reward signal (small penalty per step, bigger penalty for traps, positive reward for goal).",
+        "A Q-table acts like adjustable weights: one value per (state, action).",
+        "With exploration (epsilon), the agent still tries random moves to discover better paths.",
+        "Over episodes, the best-action arrows stabilize into a short, safe route to the goal."
+      ],
+      meaning:
+        "This is reinforcement learning in tabular form: behavior improves from reward feedback without labeled correct actions."
+    };
+
+    let lastUpdateEl = null;
+    let updateHistoryEl = null;
+
+    function renderLearningSummary(targetEl) {
+      if (!targetEl) return;
+      const section = document.createElement("section");
+      section.innerHTML = `
+        <h3>${learningSummary.title}</h3>
+        <ul>
+          ${learningSummary.bullets.map((item) => `<li>${item}</li>`).join("")}
+        </ul>
+        <p><strong>Why it matters:</strong> ${learningSummary.meaning}</p>
+      `;
+      targetEl.appendChild(section);
+    }
+
+    function renderMathWalkthrough(targetEl) {
+      if (!targetEl) return;
+      const section = document.createElement("section");
+      section.innerHTML = `
+        <h3>Math view (what changes each step)</h3>
+        <p><strong>Update rule:</strong> Q(s, a) = Q(s, a) + alpha × (reward + gamma × max Q(s′, a′) − Q(s, a))</p>
+        <p>Interpretation:</p>
+        <ul>
+          <li><strong>Q(s, a)</strong> is the current weight for action <code>a</code> in state <code>s</code>.</li>
+          <li><strong>reward + gamma × max Q(s′, a′)</strong> is the target estimate.</li>
+          <li><strong>TD error</strong> = target − old Q, and the new Q moves a fraction <code>alpha</code> toward the target.</li>
+          <li>Terminal state: future term is 0, so target = reward only.</li>
+        </ul>
+        <p><strong>Worked example:</strong> if oldQ = 0.20, reward = -0.04, maxNextQ = 0.60, alpha = 0.10, gamma = 0.95, then target = -0.04 + 0.95×0.60 = 0.53, TD error = 0.33, newQ = 0.20 + 0.10×0.33 = 0.233.</p>
+      `;
+      targetEl.appendChild(section);
+    }
+
+    function renderLastUpdatePanel(targetEl) {
+      if (!targetEl) return;
+      const section = document.createElement("section");
+      section.id = "lastUpdateSection";
+      section.innerHTML = `
+        <h3>Last Q-update (live)</h3>
+        <div id="lastUpdate"></div>
+        <h4>Move-by-move trace (one line each)</h4>
+        <div id="updateHistory"></div>
+      `;
+      targetEl.appendChild(section);
+      lastUpdateEl = section.querySelector("#lastUpdate");
+      updateHistoryEl = section.querySelector("#updateHistory");
+    }
+
+    function updateLastUpdatePanel(data) {
+      if (!lastUpdateEl) return;
+      if (!data) {
+        lastUpdateEl.textContent = "No updates yet. Start training or click Step Training Move.";
+        if (updateHistoryEl) updateHistoryEl.textContent = "(Move trace will appear here.)";
+        return;
+      }
+      lastUpdateEl.textContent = [
+        `state s      = (${data.state.x}, ${data.state.y})`,
+        `action a     = ${data.action}`,
+        `next state s'= (${data.nextState.x}, ${data.nextState.y})`,
+        `reward r     = ${data.reward.toFixed(3)}`,
+        `done         = ${String(data.done)}`,
+        "",
+        `old Q(s,a)   = ${data.oldQ.toFixed(6)}`,
+        `max Q(s',.)  = ${data.nextBest.toFixed(6)}`,
+        `target       = r + gamma*maxQ = ${data.target.toFixed(6)}`,
+        `td error     = target - oldQ = ${data.tdError.toFixed(6)}`,
+        `new Q(s,a)   = oldQ + alpha*td = ${data.newQ.toFixed(6)}`,
+        "",
+        `alpha=${data.alpha}, gamma=${data.gamma}`
+      ].join("\n");
+
+      if (!updateHistoryEl) return;
+      const summary = [
+        `s=(${data.state.x},${data.state.y})`,
+        `a=${data.action}`,
+        `r=${data.reward.toFixed(2)}`,
+        `s' =(${data.nextState.x},${data.nextState.y})`,
+        `target=${data.target.toFixed(3)}`,
+        `newQ=${data.newQ.toFixed(3)}`,
+        data.done ? "terminal" : "continue"
+      ].join(" | ");
+      const line = document.createElement("div");
+      line.textContent = summary;
+      updateHistoryEl.prepend(line);
+      while (updateHistoryEl.childElementCount > 14) {
+        updateHistoryEl.removeChild(updateHistoryEl.lastElementChild);
+      }
+    }
+
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const statsEl = document.getElementById("stats");
+    const statusEl = document.getElementById("status");
+    const showLearningEl = document.getElementById("showLearning");
+    const visualSpeedEl = document.getElementById("visualSpeed");
+    const speedLabelEl = document.getElementById("speedLabel");
+    const metricsEl = document.getElementById("metrics");
+    const train100Btn = document.getElementById("train100");
+    const train1000Btn = document.getElementById("train1000");
+    const stepMoveBtn = document.getElementById("stepMove");
+    const runGreedyBtn = document.getElementById("runGreedy");
+    const resetBtn = document.getElementById("reset");
+    const stopBtn = document.getElementById("stop");
+    const alphaInput = document.getElementById("alphaInput");
+    const gammaInput = document.getElementById("gammaInput");
+    const epsStartInput = document.getElementById("epsStartInput");
+    const epsDecayInput = document.getElementById("epsDecayInput");
+    const epsMinInput = document.getElementById("epsMinInput");
+    const applyParamsBtn = document.getElementById("applyParams");
+    const resetParamsBtn = document.getElementById("resetParams");
+    const versionBtn = document.getElementById("versionBtn");
+    const versionDialog = document.getElementById("versionDialog");
+    const versionListEl = document.getElementById("versionList");
+    const versionDetailsEl = document.getElementById("versionDetails");
+    const debugOutputEl = document.getElementById("debugOutput");
+    const debugRefreshBtn = document.getElementById("debugRefresh");
+    const debugTestModuleBtn = document.getElementById("debugTestModule");
+    const debugCopyBtn = document.getElementById("debugCopy");
+    const debugSelfCheckBtn = document.getElementById("debugSelfCheck");
+    const debugClearBtn = document.getElementById("debugClear");
+
+    const GRID_SIZE = 5;
+    const CELL = canvas.width / GRID_SIZE;
+
+    const ACTIONS = ["up", "down", "left", "right"];
+    const START = { x: 0, y: 0 };
+    const GOAL = { x: 4, y: 4 };
+    const TRAPS = [{ x: 3, y: 1 }, { x: 1, y: 3 }];
+
+    const defaultParams = { alpha: 0.1, gamma: 0.95, epsilonStart: 0.3, epsilonDecay: 0.995, minEpsilon: 0.05 };
+    let alpha = defaultParams.alpha;
+    let gamma = defaultParams.gamma;
+    let epsilonStart = defaultParams.epsilonStart;
+    let epsilon = defaultParams.epsilonStart;
+    let epsilonDecay = defaultParams.epsilonDecay;
+    let minEpsilon = defaultParams.minEpsilon;
+
+    let episode = 0;
+    let rewardsHistory = [];
+    const outcomesHistory = [];
+    const METRICS_WINDOW = 100;
+    let busy = false;
+    let cancelRequested = false;
+
+    const SAVE_KEY = "ml101-qlearning-state-v1";
+    const VERSION_HISTORY_FILE = "./VERSION_HISTORY.md";
+    const ACTIVE_VERSION = versionBtn.textContent.trim();
+    let historyEntries = [];
+    let selectedVersion = ACTIVE_VERSION;
+
+    let stepSession = {
+      active: false,
+      state: null,
+      totalReward: 0,
+      steps: 0
+    };
+
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function saveState() {
+      const state = { Q, epsilon, epsilonStart, epsilonDecay, minEpsilon, alpha, gamma, episode, rewardsHistory, outcomesHistory };
+      localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(SAVE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (!parsed || !parsed.Q) return;
+
+        Q = parsed.Q;
+        epsilon = Number.isFinite(parsed.epsilon) ? parsed.epsilon : epsilon;
+        alpha = Number.isFinite(parsed.alpha) ? parsed.alpha : alpha;
+        gamma = Number.isFinite(parsed.gamma) ? parsed.gamma : gamma;
+        epsilonStart = Number.isFinite(parsed.epsilonStart) ? parsed.epsilonStart : epsilonStart;
+        epsilonDecay = Number.isFinite(parsed.epsilonDecay) ? parsed.epsilonDecay : epsilonDecay;
+        minEpsilon = Number.isFinite(parsed.minEpsilon) ? parsed.minEpsilon : minEpsilon;
+        episode = Number.isFinite(parsed.episode) ? parsed.episode : episode;
+        rewardsHistory = Array.isArray(parsed.rewardsHistory) ? parsed.rewardsHistory.slice(-100) : [];
+        if (Array.isArray(parsed.outcomesHistory)) {
+          outcomesHistory.push(...parsed.outcomesHistory.slice(-METRICS_WINDOW));
+        }
+      } catch {
+        statusEl.textContent = "Could not load saved state. Starting fresh.";
+      }
+    }
+    function parseVersionHistory(markdownText) {
+      const lines = markdownText.split(String.fromCharCode(10));
+      const entries = [];
+      let current = null;
+
+      for (const rawLine of lines) {
+        const line = rawLine.trim();
+        const match = line.match(/^##\s+(v\d+\.\d+\.\d+)/i);
+        if (match) {
+          if (current) entries.push(current);
+          current = { version: match[1], notes: [] };
+          continue;
+        }
+        if (!current) continue;
+        if (line.startsWith("- ")) current.notes.push(line.slice(2));
+      }
+      if (current) entries.push(current);
+      return entries;
+    }
+
+    function renderVersionDetails(version) {
+      const entry = historyEntries.find(item => item.version === version);
+      if (!entry) {
+        versionDetailsEl.textContent = "No details available for this version.";
+        return;
+      }
+      const activeMark = version === ACTIVE_VERSION ? " (active)" : "";
+      const notes = entry.notes.length
+        ? entry.notes.map(note => `- ${note}`).join(String.fromCharCode(10))
+        : "- No notes recorded.";
+      versionDetailsEl.textContent = `${entry.version}${activeMark}` + String.fromCharCode(10) + String.fromCharCode(10) + notes;
+    }
+
+    function renderVersionList() {
+      if (!historyEntries.length) {
+        versionListEl.textContent = "No version entries found.";
+        return;
+      }
+      versionListEl.innerHTML = "";
+      for (const entry of historyEntries) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.dataset.version = entry.version;
+        btn.className = [
+          entry.version === ACTIVE_VERSION ? "current" : "",
+          entry.version === selectedVersion ? "viewing" : ""
+        ].filter(Boolean).join(" ");
+        btn.textContent = entry.version;
+        if (entry.version === ACTIVE_VERSION) {
+          const badge = document.createElement("span");
+          badge.className = "version-badge";
+          badge.textContent = "active";
+          btn.appendChild(badge);
+        }
+        versionListEl.appendChild(btn);
+      }
+    }
+
+    async function showVersionHistory() {
+      if (!versionDialog) return;
+      versionDialog.showModal();
+      versionDetailsEl.textContent = "Loading version history…";
+      versionListEl.textContent = "Loading…";
+      try {
+        const resp = await fetch(VERSION_HISTORY_FILE, { cache: "no-store" });
+        if (!resp.ok) throw new Error(`Failed to load ${VERSION_HISTORY_FILE}`);
+        historyEntries = parseVersionHistory(await resp.text());
+        selectedVersion = historyEntries.some(e => e.version === ACTIVE_VERSION)
+          ? ACTIVE_VERSION
+          : (historyEntries[0]?.version ?? ACTIVE_VERSION);
+        renderVersionList();
+        renderVersionDetails(selectedVersion);
+      } catch {
+        versionListEl.textContent = "Unable to load version list.";
+        versionDetailsEl.textContent = "Unable to load version history right now.";
+      }
+    }
+
+    function syncParamInputs() {
+      alphaInput.value = String(alpha);
+      gammaInput.value = String(gamma);
+      epsStartInput.value = String(epsilonStart);
+      epsDecayInput.value = String(epsilonDecay);
+      epsMinInput.value = String(minEpsilon);
+    }
+
+    function validateParams(candidate) {
+      const inRange = (v, lo, hi) => Number.isFinite(v) && v >= lo && v <= hi;
+      if (!inRange(candidate.alpha, 0.01, 1)) return "alpha must be between 0.01 and 1.";
+      if (!inRange(candidate.gamma, 0, 1)) return "gamma must be between 0 and 1.";
+      if (!inRange(candidate.epsilonStart, 0, 1)) return "epsilon start must be between 0 and 1.";
+      if (!inRange(candidate.epsilonDecay, 0.9, 1)) return "epsilon decay must be between 0.9 and 1.";
+      if (!inRange(candidate.minEpsilon, 0, 1)) return "epsilon min must be between 0 and 1.";
+      if (candidate.minEpsilon > candidate.epsilonStart) return "epsilon min cannot be greater than epsilon start.";
+      return null;
+    }
+
+    function applyParamsFromInputs() {
+      const candidate = {
+        alpha: Number(alphaInput.value),
+        gamma: Number(gammaInput.value),
+        epsilonStart: Number(epsStartInput.value),
+        epsilonDecay: Number(epsDecayInput.value),
+        minEpsilon: Number(epsMinInput.value)
+      };
+      const error = validateParams(candidate);
+      if (error) {
+        statusEl.textContent = `Hyperparameter error: ${error}`;
+        return;
+      }
+      alpha = candidate.alpha;
+      gamma = candidate.gamma;
+      epsilonStart = candidate.epsilonStart;
+      epsilonDecay = candidate.epsilonDecay;
+      minEpsilon = candidate.minEpsilon;
+      epsilon = Math.min(Math.max(epsilon, minEpsilon), epsilonStart);
+      statusEl.textContent = "Hyperparameters applied.";
+      saveState();
+      draw();
+    }
+
+    function resetHyperparameters() {
+      alpha = defaultParams.alpha;
+      gamma = defaultParams.gamma;
+      epsilonStart = defaultParams.epsilonStart;
+      epsilonDecay = defaultParams.epsilonDecay;
+      minEpsilon = defaultParams.minEpsilon;
+      epsilon = epsilonStart;
+      syncParamInputs();
+      statusEl.textContent = "Hyperparameters reset to defaults.";
+      saveState();
+      draw();
+    }
+
+    const debugLog = [];
+    function debugSnapshotText() {
+      const lines = [
+        `appVersion=${versionBtn.textContent.trim()}`,
+        `userAgent=${navigator.userAgent}`,
+        `platform=${navigator.platform || "n/a"}`,
+        `language=${navigator.language}`,
+        `viewport=${window.innerWidth}x${window.innerHeight}`,
+        `screen=${screen.width}x${screen.height}`,
+        `devicePixelRatio=${window.devicePixelRatio}`,
+        `maxTouchPoints=${navigator.maxTouchPoints ?? 0}`,
+        `orientation=${screen.orientation?.type || window.orientation || "n/a"}`,
+        `online=${navigator.onLine}`,
+        `explainerMode=inlined v0.1.3 rollback + diagnostics`
+      ];
+      return lines.join("\n");
+    }
+    function renderDebugSnapshot() {
+      if (!debugOutputEl) return;
+      const recent = debugLog.slice(-20).join("\n") || "(no runtime errors logged yet)";
+      debugOutputEl.textContent = `${debugSnapshotText()}\n\nRecent runtime log:\n${recent}`;
+    }
+
+    function pushDebug(message) {
+      const stamp = new Date().toISOString().slice(11, 19);
+      debugLog.push(`[${stamp}] ${message}`);
+      if (debugLog.length > 200) debugLog.shift();
+      renderDebugSnapshot();
+    }
+
+    async function testExplainerModuleLoad() {
+      try {
+        const mod = await import(`./ml101-explainer.js?ts=${Date.now()}`);
+        const exportsList = Object.keys(mod).join(", ");
+        pushDebug(`module import success; exports: ${exportsList}`);
+      } catch (error) {
+        pushDebug(`module import failed: ${error?.message || String(error)}`);
+      }
+    }
+
+    function safeAction(name, action) {
+      return (...args) => {
+        try {
+          return action(...args);
+        } catch (error) {
+          pushDebug(`${name} failed: ${error?.message || String(error)}`);
+          statusEl.textContent = `Error in ${name}. See debug tools.`;
+        }
+      };
+    }
+
+    function runStartupSelfCheck() {
+      const checks = [
+        ["canvas context", !!ctx],
+        ["explanation root", !!document.getElementById("explanation")],
+        ["last update panel", !!document.getElementById("lastUpdate")],
+        ["metrics panel", !!metricsEl],
+        ["version dialog", !!versionDialog],
+        ["debug panel", !!debugOutputEl],
+        ["Q-table init", !!Q && typeof Q === "object" && Object.keys(Q).length > 0],
+        ["training handlers", typeof trainEpisodes === "function" && typeof stepTrainingMove === "function"]
+      ];
+      return checks.filter(([, ok]) => !ok).map(([name]) => name);
+    }
+
+    function reportSelfCheck() {
+      const failed = runStartupSelfCheck();
+      if (!failed.length) {
+        pushDebug("self-check passed");
+        return;
+      }
+      pushDebug(`self-check failed: ${failed.join(", ")}`);
+      statusEl.textContent = "Self-check reported issues. Open debug tools.";
+    }
+
+    function stateKey(x, y) {
+      return `${x},${y}`;
+    }
+
+    function createQTable() {
+      const q = {};
+      for (let y = 0; y < GRID_SIZE; y++) {
+        for (let x = 0; x < GRID_SIZE; x++) {
+          q[stateKey(x, y)] = { up: 0, down: 0, left: 0, right: 0 };
+        }
+      }
+      return q;
+    }
+
+    let Q = createQTable();
+
+    function isTrap(x, y) {
+      return TRAPS.some(t => t.x === x && t.y === y);
+    }
+
+    function isGoal(x, y) {
+      return x === GOAL.x && y === GOAL.y;
+    }
+
+    function resetEnv() {
+      return { x: START.x, y: START.y };
+    }
+
+    function step(state, action) {
+      let { x, y } = state;
+
+      if (action === "up") y--;
+      if (action === "down") y++;
+      if (action === "left") x--;
+      if (action === "right") x++;
+
+      x = Math.max(0, Math.min(GRID_SIZE - 1, x));
+      y = Math.max(0, Math.min(GRID_SIZE - 1, y));
+
+      let reward = -0.04;
+      let done = false;
+
+      if (isTrap(x, y)) {
+        reward = -1;
+        done = true;
+      } else if (isGoal(x, y)) {
+        reward = 1;
+        done = true;
+      }
+
+      return { nextState: { x, y }, reward, done };
+    }
+
+    function maxQ(state) {
+      const values = Object.values(Q[stateKey(state.x, state.y)]);
+      return Math.max(...values);
+    }
+
+    function bestAction(state) {
+      const qs = Q[stateKey(state.x, state.y)];
+      let best = ACTIONS[0];
+      for (const a of ACTIONS) {
+        if (qs[a] > qs[best]) best = a;
+      }
+      return best;
+    }
+
+    function chooseAction(state) {
+      if (Math.random() < epsilon) {
+        return ACTIONS[Math.floor(Math.random() * ACTIONS.length)];
+      }
+      return bestAction(state);
+    }
+
+    function setControlsDisabled(disabled) {
+      train100Btn.disabled = disabled;
+      train1000Btn.disabled = disabled;
+      stepMoveBtn.disabled = disabled;
+      runGreedyBtn.disabled = disabled;
+      resetBtn.disabled = disabled;
+      applyParamsBtn.disabled = disabled;
+      resetParamsBtn.disabled = disabled;
+      stopBtn.disabled = !disabled;
+    }
+
+    function applyQUpdate(state, action, nextState, reward, done) {
+      const sKey = stateKey(state.x, state.y);
+      const oldQ = Q[sKey][action];
+      const nextBest = done ? 0 : maxQ(nextState);
+      const target = reward + gamma * nextBest;
+      const tdError = target - oldQ;
+      const newQ = oldQ + alpha * tdError;
+      Q[sKey][action] = newQ;
+
+      return {
+        state: { ...state },
+        action,
+        reward,
+        nextState: { ...nextState },
+        done,
+        oldQ,
+        nextBest,
+        target,
+        tdError,
+        newQ,
+        alpha,
+        gamma
+      };
+    }
+
+    async function trainEpisode(maxSteps = 100, visualize = false) {
+      let state = resetEnv();
+      let totalReward = 0;
+      let steps = 0;
+
+      for (let i = 0; i < maxSteps; i++) {
+        const action = chooseAction(state);
+        const { nextState, reward, done } = step(state, action);
+        const update = applyQUpdate(state, action, nextState, reward, done);
+
+        totalReward += reward;
+        state = nextState;
+        steps = i + 1;
+        updateLastUpdatePanel(update);
+
+        if (visualize) {
+          draw(state);
+          statusEl.textContent = `Training episode ${episode + 1}: step ${steps}/${maxSteps}`;
+          await sleep(Number(visualSpeedEl.value));
+        }
+
+        if (done || cancelRequested) break;
+      }
+
+      episode++;
+      rewardsHistory.push(totalReward);
+      if (rewardsHistory.length > 100) rewardsHistory.shift();
+
+      const terminalOutcome = state.x === GOAL.x && state.y === GOAL.y
+        ? "goal"
+        : isTrap(state.x, state.y)
+          ? "trap"
+          : "timeout";
+      recordOutcome({ outcome: terminalOutcome, steps });
+
+      epsilon = Math.max(minEpsilon, epsilon * epsilonDecay);
+      saveState();
+      return { totalReward, steps };
+    }
+
+    async function stepTrainingMove() {
+      if (busy) return;
+
+      if (!stepSession.active) {
+        stepSession = { active: true, state: resetEnv(), totalReward: 0, steps: 0 };
+        statusEl.textContent = `Step mode: episode ${episode + 1} started.`;
+      }
+
+      const action = chooseAction(stepSession.state);
+      const { nextState, reward, done } = step(stepSession.state, action);
+      const update = applyQUpdate(stepSession.state, action, nextState, reward, done);
+      updateLastUpdatePanel(update);
+
+      stepSession.state = nextState;
+      stepSession.totalReward += reward;
+      stepSession.steps += 1;
+
+      draw(stepSession.state);
+      statusEl.textContent = `Step mode: action ${stepSession.steps}, reward ${reward.toFixed(2)}.`;
+
+      if (done || stepSession.steps >= 100) {
+        episode++;
+        rewardsHistory.push(stepSession.totalReward);
+        if (rewardsHistory.length > 100) rewardsHistory.shift();
+        epsilon = Math.max(minEpsilon, epsilon * epsilonDecay);
+
+        const ending = done ? "terminal state reached" : "max steps reached";
+        const terminalOutcome = stepSession.state.x === GOAL.x && stepSession.state.y === GOAL.y
+          ? "goal"
+          : isTrap(stepSession.state.x, stepSession.state.y)
+            ? "trap"
+            : "timeout";
+        recordOutcome({ outcome: terminalOutcome, steps: stepSession.steps });
+        statusEl.textContent = `Step episode completed (${ending}). Total reward: ${stepSession.totalReward.toFixed(3)}.`;
+        stepSession = { active: false, state: null, totalReward: 0, steps: 0 };
+        draw();
+      }
+    }
+
+    async function trainEpisodes(count) {
+      if (busy) return;
+      busy = true;
+      setControlsDisabled(true);
+
+      stepSession = { active: false, state: null, totalReward: 0, steps: 0 };
+      const visualize = showLearningEl.checked;
+      cancelRequested = false;
+
+      try {
+        for (let i = 0; i < count; i++) {
+          if (cancelRequested) break;
+          await trainEpisode(100, visualize);
+          if (visualize) {
+            draw();
+            await sleep(Math.max(60, Number(visualSpeedEl.value) - 120));
+          }
+        }
+
+        statusEl.textContent = cancelRequested
+          ? "Training stopped by user."
+          : `Completed training for ${count} episodes.`;
+      } finally {
+        draw();
+        setControlsDisabled(false);
+        busy = false;
+      }
+    }
+
+    function average(arr) {
+      if (!arr.length) return 0;
+      return arr.reduce((a, b) => a + b, 0) / arr.length;
+    }
+
+    function recordOutcome(outcome) {
+      outcomesHistory.push(outcome);
+      if (outcomesHistory.length > METRICS_WINDOW) outcomesHistory.shift();
+      saveState();
+    }
+
+    function updateMetrics() {
+      if (!outcomesHistory.length) {
+        metricsEl.textContent = "No completed episodes yet.";
+        return;
+      }
+      const successes = outcomesHistory.filter(o => o.outcome === "goal").length;
+      const traps = outcomesHistory.filter(o => o.outcome === "trap").length;
+      const timeouts = outcomesHistory.filter(o => o.outcome === "timeout").length;
+      const avgSteps = average(outcomesHistory.map(o => o.steps));
+      const windowSize = outcomesHistory.length;
+
+      metricsEl.textContent = `Last ${windowSize} episodes | Success: ${((successes / windowSize) * 100).toFixed(1)}% | Trap hits: ${traps} | Timeouts: ${timeouts} | Avg steps: ${avgSteps.toFixed(1)}`;
+    }
+
+    function drawArrow(x, y, action) {
+      const cx = x * CELL + CELL / 2;
+      const cy = y * CELL + CELL / 2;
+      const len = CELL * 0.2;
+
+      ctx.beginPath();
+      if (action === "up") {
+        ctx.moveTo(cx, cy - len);
+        ctx.lineTo(cx, cy + len);
+      } else if (action === "down") {
+        ctx.moveTo(cx, cy + len);
+        ctx.lineTo(cx, cy - len);
+      } else if (action === "left") {
+        ctx.moveTo(cx - len, cy);
+        ctx.lineTo(cx + len, cy);
+      } else if (action === "right") {
+        ctx.moveTo(cx + len, cy);
+        ctx.lineTo(cx - len, cy);
+      }
+      ctx.stroke();
+    }
+
+    function draw(agent = null) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let y = 0; y < GRID_SIZE; y++) {
+        for (let x = 0; x < GRID_SIZE; x++) {
+          const px = x * CELL;
+          const py = y * CELL;
+
+          ctx.strokeRect(px, py, CELL, CELL);
+
+          if (x === START.x && y === START.y) {
+            ctx.fillStyle = "#d0e8ff";
+            ctx.fillRect(px, py, CELL, CELL);
+          }
+
+          if (isGoal(x, y)) {
+            ctx.fillStyle = "#b6f5b6";
+            ctx.fillRect(px, py, CELL, CELL);
+          }
+
+          if (isTrap(x, y)) {
+            ctx.fillStyle = "#f5b6b6";
+            ctx.fillRect(px, py, CELL, CELL);
+          }
+
+          ctx.strokeStyle = "#333";
+          drawArrow(x, y, bestAction({ x, y }));
+        }
+      }
+
+      if (agent) {
+        ctx.fillStyle = "#111";
+        ctx.beginPath();
+        ctx.arc(agent.x * CELL + CELL / 2, agent.y * CELL + CELL / 2, CELL * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      statsEl.textContent =
+        `Episode: ${episode} | Epsilon: ${epsilon.toFixed(3)} | alpha: ${alpha.toFixed(2)} | gamma: ${gamma.toFixed(2)} | decay: ${epsilonDecay.toFixed(3)} | Avg reward (last ${rewardsHistory.length}): ${average(rewardsHistory).toFixed(3)}`;
+      updateMetrics();
+    }
+
+    async function runLearnedPolicy() {
+      if (busy) return;
+      busy = true;
+      setControlsDisabled(true);
+      stepSession = { active: false, state: null, totalReward: 0, steps: 0 };
+      cancelRequested = false;
+      statusEl.textContent = "Running greedy policy.";
+
+      let state = resetEnv();
+      draw(state);
+
+      try {
+        for (let i = 0; i < 30; i++) {
+          if (cancelRequested) break;
+          await sleep(320);
+          const action = bestAction(state);
+          const { nextState, done } = step(state, action);
+          state = nextState;
+          draw(state);
+          if (done) break;
+        }
+
+        statusEl.textContent = cancelRequested ? "Greedy run stopped by user." : "Greedy run completed.";
+      } finally {
+        setControlsDisabled(false);
+        busy = false;
+      }
+    }
+
+    train100Btn.onclick = safeAction("train100", () => trainEpisodes(100));
+    train1000Btn.onclick = safeAction("train1000", () => trainEpisodes(1000));
+    stepMoveBtn.onclick = safeAction("stepMove", stepTrainingMove);
+    runGreedyBtn.onclick = safeAction("runGreedy", runLearnedPolicy);
+
+    stopBtn.onclick = () => {
+      if (!busy) return;
+      cancelRequested = true;
+      statusEl.textContent = "Stopping…";
+    };
+
+    resetBtn.onclick = () => {
+      if (busy) return;
+      Q = createQTable();
+      epsilon = epsilonStart;
+      episode = 0;
+      rewardsHistory = [];
+      outcomesHistory.length = 0;
+      stepSession = { active: false, state: null, totalReward: 0, steps: 0 };
+      cancelRequested = false;
+      statusEl.textContent = "Reset complete.";
+      updateLastUpdatePanel(null);
+      localStorage.removeItem(SAVE_KEY);
+      draw();
+    };
+
+    visualSpeedEl.oninput = () => {
+      speedLabelEl.textContent = `${visualSpeedEl.value}ms`;
+    };
+
+    versionBtn.onclick = safeAction("versionHistory", showVersionHistory);
+    debugRefreshBtn.onclick = safeAction("debugRefresh", renderDebugSnapshot);
+    debugTestModuleBtn.onclick = safeAction("debugTestModule", testExplainerModuleLoad);
+    debugSelfCheckBtn.onclick = safeAction("debugSelfCheck", reportSelfCheck);
+    debugClearBtn.onclick = () => {
+      debugLog.length = 0;
+      renderDebugSnapshot();
+    };
+    debugCopyBtn.onclick = async () => {
+      const text = debugOutputEl?.textContent || "";
+      try {
+        await navigator.clipboard.writeText(text);
+        pushDebug("debug report copied to clipboard");
+      } catch {
+        pushDebug("clipboard copy failed; select and copy manually");
+      }
+    };
+    window.addEventListener("error", (event) => pushDebug(`window.error: ${event.message}`));
+    window.addEventListener("unhandledrejection", (event) => pushDebug(`unhandledrejection: ${event.reason}`));
+    window.addEventListener("resize", renderDebugSnapshot);
+
+    versionListEl.onclick = (event) => {
+      const target = event.target.closest("button[data-version]");
+      if (!target) return;
+      selectedVersion = target.dataset.version;
+      renderVersionList();
+      renderVersionDetails(selectedVersion);
+    };
+    applyParamsBtn.onclick = applyParamsFromInputs;
+    resetParamsBtn.onclick = resetHyperparameters;
+
+    renderLastUpdatePanel(document.getElementById("explanation"));
+    renderLearningSummary(document.getElementById("explanation"));
+    renderMathWalkthrough(document.getElementById("explanation"));
+    loadState();
+    syncParamInputs();
+    updateLastUpdatePanel(null);
+    renderDebugSnapshot();
+    reportSelfCheck();
+    draw();
+  </script>
+</body>
+</html>
