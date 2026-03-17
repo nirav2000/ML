@@ -12,17 +12,21 @@ export const learningSummary = {
 };
 
 let lastUpdateEl = null;
+let updateHistoryEl = null;
 
 export function renderLearningSummary(targetEl) {
   if (!targetEl) return;
 
-  targetEl.innerHTML = `
+  const section = document.createElement("section");
+  section.innerHTML = `
     <h3>${learningSummary.title}</h3>
     <ul>
       ${learningSummary.bullets.map((item) => `<li>${item}</li>`).join("")}
     </ul>
     <p><strong>Why it matters:</strong> ${learningSummary.meaning}</p>
   `;
+
+  targetEl.appendChild(section);
 }
 
 export function renderMathWalkthrough(targetEl) {
@@ -45,31 +49,21 @@ export function renderMathWalkthrough(targetEl) {
   targetEl.appendChild(section);
 }
 
-export function renderTrainingFlowFAQ(targetEl) {
-  if (!targetEl) return;
-
-  const section = document.createElement("section");
-  section.innerHTML = `
-    <h3>What is happening during training?</h3>
-    <p><strong>Is the first move random?</strong> Usually yes. Early in training, <code>epsilon=0.3</code> means there is a 30% chance the agent explores with a random action; otherwise it picks the best-known action from the Q-table. At the start all Q-values are tied at 0, so even "best" actions are effectively arbitrary until learning begins.</p>
-    <p><strong>What happens after that first move?</strong> The environment returns a next state and reward, then one Q-value is updated using the Q-learning rule. This repeats step-by-step until a terminal state (goal or trap) or the step limit is hit. Over many episodes, good moves accumulate higher Q-values and become preferred.</p>
-    <p><strong>How is reward given at the destination?</strong> Entering the goal cell gives <code>reward = +1</code> and ends the episode. Traps give <code>-1</code>, and normal moves give a small penalty <code>-0.04</code> to encourage shorter paths.</p>
-  `;
-
-  targetEl.appendChild(section);
-}
-
 export function renderLastUpdatePanel(targetEl) {
   if (!targetEl) return;
 
   const section = document.createElement("section");
+  section.id = "lastUpdateSection";
   section.innerHTML = `
     <h3>Last Q-update (live)</h3>
     <div id="lastUpdate"></div>
+    <h4>Move-by-move trace (one line each)</h4>
+    <div id="updateHistory"></div>
   `;
 
   targetEl.appendChild(section);
   lastUpdateEl = section.querySelector("#lastUpdate");
+  updateHistoryEl = section.querySelector("#updateHistory");
 }
 
 export function updateLastUpdatePanel(data) {
@@ -77,6 +71,7 @@ export function updateLastUpdatePanel(data) {
 
   if (!data) {
     lastUpdateEl.textContent = "No updates yet. Start training or click Step Training Move.";
+    if (updateHistoryEl) updateHistoryEl.textContent = "(Move trace will appear here.)";
     return;
   }
 
@@ -95,4 +90,24 @@ export function updateLastUpdatePanel(data) {
     "",
     `alpha=${data.alpha}, gamma=${data.gamma}`
   ].join("\n");
+
+  if (!updateHistoryEl) return;
+  const summary = [
+    `s=(${data.state.x},${data.state.y})`,
+    `a=${data.action}`,
+    `r=${data.reward.toFixed(2)}`,
+    `s' =(${data.nextState.x},${data.nextState.y})`,
+    `target=${data.target.toFixed(3)}`,
+    `newQ=${data.newQ.toFixed(3)}`,
+    data.done ? "terminal" : "continue"
+  ].join(" | ");
+
+  const line = document.createElement("div");
+  line.textContent = summary;
+  updateHistoryEl.prepend(line);
+
+  while (updateHistoryEl.childElementCount > 14) {
+    updateHistoryEl.removeChild(updateHistoryEl.lastElementChild);
+  }
+
 }
