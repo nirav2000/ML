@@ -16,3 +16,8 @@ To avoid accidental overwrite loops when debugging:
   - `ML101.html`
   - `ml101-explainer.js`
   - `VERSION_HISTORY.md`
+
+5. To snapshot remote safely without changing live files:
+   - `bash ML101_versions/safe_fetch_and_archive.sh <archive_name>`
+
+This archives `ML101.html`, `ml101-explainer.js`, and `VERSION_HISTORY.md` from `FETCH_HEAD` into `ML101_versions/` for comparison or recovery.

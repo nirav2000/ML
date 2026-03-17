@@ -21,3 +21,5 @@ Use archived files for recovery/reference unless explicitly promoted.
 - `archive_ml101_version.sh <version>`: archives current root ML101 files into `ML101_versions/<version>/`.
 - `verify_or_recreate_v0.1.6.sh`: verifies `v0.1.6` snapshot files exist and recreates them if missing.
 - `smart_sync_notes.md`: cautious fetch/archive workflow to avoid accidental live-file overwrites.
+
+- `safe_fetch_and_archive.sh [archive_name]`: fetches remote main and archives target ML101 files from FETCH_HEAD without touching live top-level files.
