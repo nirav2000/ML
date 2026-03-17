@@ -1,0 +1,34 @@
+{
+  "latest": "1.2.0",
+  "versions": [
+    {
+      "version": "1.2.0",
+      "label": "Fixed GitHub Pages base-path version loading",
+      "appFile": "pong_evolution.html",
+      "changes": [
+        "Fixed root URL detection so changelog/version switching works on project pages (e.g. /ML/...).",
+        "Ensured current-file detection resolves correctly when loaded from root or /versions/... paths.",
+        "Archived the previous current build as versions/1.1.0/pong_evolution.html."
+      ]
+    },
+    {
+      "version": "1.1.0",
+      "label": "Version archive support + changelog modal",
+      "appFile": "versions/1.1.0/pong_evolution.html",
+      "changes": [
+        "Added version footer + changelog modal.",
+        "Added root-aware version switching for current and archived paths.",
+        "Fetches pong_evolution.versions.json with cache-busting to avoid stale history."
+      ]
+    },
+    {
+      "version": "1.0.0",
+      "label": "Initial Pong Evolution release",
+      "appFile": "versions/1.0.0/pong_evolution.html",
+      "changes": [
+        "Initial plain JavaScript Pong Evolution implementation.",
+        "Neuroevolution loop with mutation, selection, and best-bot watch mode."
+      ]
+    }
+  ]
+}
