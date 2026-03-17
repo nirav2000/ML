@@ -1,20 +1,23 @@
 # ML101 version snapshots
 
-This folder stores archived ML101 app snapshots to avoid overwriting the live top-level files.
+This folder stores archived ML101 app snapshots so recovery work does not overwrite the live top-level files.
+
+## Current policy
+- Keep active app files at repository root (`ML101.html`, `ml101-explainer.js`, `VERSION_HISTORY.md`).
+- Place recovered or historical copies in versioned subfolders under `ML101_versions/`.
+- Prefer retrieving snapshots from `origin/main` first.
+- If a target snapshot cannot be retrieved from remote history, recreate it from current root files and mark that in `RECOVERY_STATUS.txt`.
 
 ## Included snapshots
-- `v0.1.6` (recovered from commit `44fbee3`):
+- `v0.1.6/`
   - `ML101.html`
   - `ml101-explainer.js`
   - `VERSION_HISTORY.md`
+  - `RECOVERY_STATUS.txt`
 
-Use these files only for recovery/reference unless explicitly promoted.
-
+Use archived files for recovery/reference unless explicitly promoted.
 
 ## Maintenance helpers
-- `archive_ml101_version.sh <version>`: archives current root `ML101.html`, `ml101-explainer.js`, and `VERSION_HISTORY.md` into `ML101_versions/<version>/`.
-- `verify_or_recreate_v0.1.6.sh`: verifies `v0.1.6` snapshot files exist and recreates them from current root files if missing.
-
-## Smart-sync guidance
-See `smart_sync_notes.md` for a cautious fetch/archive workflow that avoids touching live top-level version files until snapshots are secured.
-
+- `archive_ml101_version.sh <version>`: archives current root ML101 files into `ML101_versions/<version>/`.
+- `verify_or_recreate_v0.1.6.sh`: verifies `v0.1.6` snapshot files exist and recreates them if missing.
+- `smart_sync_notes.md`: cautious fetch/archive workflow to avoid accidental live-file overwrites.
