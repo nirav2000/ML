@@ -26,5 +26,5 @@ The active GitHub Actions workflow now lives at `.github/workflows/generate-dash
 The workflow regenerates preview SVGs whenever `index.html` or the preview manifest/script changes.
 
 ## Notes
-- The generated preview art is intentionally theme-consistent rather than a literal browser screenshot.
+- The generated preview art is intentionally theme-consistent and now uses bespoke animated SVG scenes rather than literal browser screenshots.
 - If you want real screenshots later, this workflow can be extended with Playwright to capture app pages automatically during CI.

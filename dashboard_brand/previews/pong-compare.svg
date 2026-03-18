@@ -14,8 +14,12 @@
     </radialGradient>
   </defs>
   <rect width="1200" height="760" rx="44" fill="url(#bg)"/>
-  <rect width="1200" height="760" rx="44" fill="url(#glowA)"/>
-  <rect width="1200" height="760" rx="44" fill="url(#glowB)"/>
+  <rect width="1200" height="760" rx="44" fill="url(#glowA)">
+    <animate attributeName="opacity" values="0.72;1;0.72" dur="8s" repeatCount="indefinite"/>
+  </rect>
+  <rect width="1200" height="760" rx="44" fill="url(#glowB)">
+    <animate attributeName="opacity" values="0.55;0.85;0.55" dur="9s" repeatCount="indefinite"/>
+  </rect>
   <rect x="44" y="42" width="1112" height="676" rx="34" fill="#0d182b" stroke="#ffffff" stroke-opacity="0.12"/>
   <rect x="72" y="68" width="256" height="44" rx="22" fill="rgba(120,166,255,0.14)" stroke="#78a6ff" stroke-opacity="0.24"/>
   <text x="104" y="97" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#ffc76b">Compare</text>
@@ -28,13 +32,31 @@
     <text x="658" y="334" font-family="Arial, sans-serif" font-size="26" font-weight="700" fill="#5fe2c2">RL lane</text>
     <line x1="330" y1="362" x2="330" y2="596" stroke="#dce9ff" stroke-width="8" stroke-dasharray="14 18" opacity="0.8"/>
     <line x1="872" y1="362" x2="872" y2="596" stroke="#dce9ff" stroke-width="8" stroke-dasharray="14 18" opacity="0.8"/>
-    <rect x="126" y="422" width="18" height="112" rx="9" fill="#78a6ff"/>
-    <rect x="510" y="448" width="18" height="112" rx="9" fill="#ffc76b"/>
-    <rect x="668" y="390" width="18" height="112" rx="9" fill="#5fe2c2"/>
-    <rect x="1052" y="430" width="18" height="112" rx="9" fill="#78a6ff"/>
-    <circle cx="362" cy="470" r="15" fill="#ffffff"/>
-    <circle cx="904" cy="470" r="15" fill="#ffffff"/>
-    <text x="148" y="586" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#ffc76b">Population score</text>
-    <text x="688" y="586" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#5fe2c2">Episode reward</text>
+    <rect x="126" y="422" width="18" height="112" rx="9" fill="#78a6ff">
+      <animate attributeName="y" values="420;356;452;420" dur="4.1s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="510" y="448" width="18" height="112" rx="9" fill="#ffc76b">
+      <animate attributeName="y" values="462;394;448;462" dur="4.1s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="668" y="390" width="18" height="112" rx="9" fill="#5fe2c2">
+      <animate attributeName="y" values="372;454;402;372" dur="3.6s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="1052" y="430" width="18" height="112" rx="9" fill="#78a6ff">
+      <animate attributeName="y" values="444;384;430;444" dur="3.6s" repeatCount="indefinite"/>
+    </rect>
+    <circle r="15" fill="#ffffff">
+      <animateMotion dur="3s" repeatCount="indefinite" path="M362 470 L520 390 L502 560 L160 430 L362 470"/>
+    </circle>
+    <circle r="15" fill="#ffffff">
+      <animateMotion dur="2.6s" repeatCount="indefinite" path="M904 470 L1060 410 L1024 560 L702 402 L904 470"/>
+    </circle>
+    <rect x="126" y="566" width="170" height="18" rx="9" fill="#ffc76b" fill-opacity="0.28">
+      <animate attributeName="width" values="90;152;124;170;100;90" dur="4.3s" repeatCount="indefinite"/>
+    </rect>
+    <rect x="668" y="566" width="170" height="18" rx="9" fill="#5fe2c2" fill-opacity="0.28">
+      <animate attributeName="width" values="110;88;148;126;166;110" dur="4.3s" repeatCount="indefinite"/>
+    </rect>
+    <text x="148" y="610" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#ffc76b">Population score</text>
+    <text x="688" y="610" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#5fe2c2">Episode reward</text>
     </g>
 </svg>
