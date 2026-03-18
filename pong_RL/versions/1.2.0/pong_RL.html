@@ -96,7 +96,7 @@
   </div>
 
   <div class="footer">
-    Version <span id="appVersion">1.2.1</span> · <span class="version-link" id="openVersions">View changelog</span>
+    Version <span id="appVersion">1.2.0</span> · <span class="version-link" id="openVersions">View changelog</span>
   </div>
 
   <div class="modal" id="versionsModal" aria-hidden="true">
@@ -112,22 +112,22 @@
 <script>
 (() => {
   const APP_FILE = 'pong_RL/pong_RL.html';
-  const APP_VERSION = '1.2.1';
+  const APP_VERSION = '1.2.0';
   const EMBED_MODE = new URLSearchParams(window.location.search).get('embed') === '1';
   const HISTORY_FILE = 'pong_RL/pong_RL.versions.json';
   const SETTINGS_STORAGE_KEY = 'pong_RL.settings.v1';
   const CHECKPOINT_STORAGE_KEY = 'pong_RL.checkpoint.v1';
   const EMBEDDED_HISTORY = {
-    latest: '1.2.1',
+    latest: '1.2.0',
     versions: [
       {
-        version: '1.2.1',
-        label: 'Throttled watch-panel updates',
+        version: '1.2.0',
+        label: 'Responsive embed mode + smoother watch loop',
         appFile: 'pong_RL/pong_RL.html',
         changes: [
-          'Kept the responsive embed mode so the full playfield still fits cleanly in the compare app.',
-          'Reduced perceived jerkiness by throttling expensive stats-panel rewrites during watch mode instead of doing a full DOM rewrite every frame.',
-          'Archived v1.2.0 under pong_RL/versions/1.2.0/pong_RL.html after the earlier delta-time and responsive layout update.'
+          'Made the layout and canvases more responsive so the full playfield fits better in narrow or embedded layouts.',
+          'Added an embed mode used by the compare app to reduce spacing while preserving the standalone controls and charts.',
+          'Smoothed watch mode with delta-time stepping and capped background training work per frame; archived v1.1.0 under pong_RL/versions/1.1.0/pong_RL.html.'
         ]
       },
       {
@@ -693,7 +693,6 @@ ${extra}`;
     let trainBudget = 0;
     let stepBudget = 0;
     let lastFrameTime = performance.now();
-    let lastStatsPaint = 0;
 
     function stepOneTick() {
       playerY = scriptedOpponent(playerY, ballY);
@@ -759,10 +758,7 @@ ${extra}`;
       }
 
       drawScene(playerY, aiY, ballX, ballY, rewardValue, playerScore, aiScore, autoTrain.checked ? 'Watching + background training' : 'Watching policy only');
-      if (now - lastStatsPaint >= 140) {
-        updateStats(autoTrain.checked ? 'Watching while background episodes continue updating the Q-table.' : 'Watching the learned policy with Q-values frozen.');
-        lastStatsPaint = now;
-      }
+      updateStats(autoTrain.checked ? 'Watching while background episodes continue updating the Q-table.' : 'Watching the learned policy with Q-values frozen.');
       animId = requestAnimationFrame(loop);
     }
 

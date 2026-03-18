@@ -440,7 +440,7 @@
     </section>
 
     <div class="footer">
-      <div>Version <span id="appVersion">1.3.0</span> · <span class="version-link" id="openVersions">View changelog</span></div>
+      <div>Version <span id="appVersion">1.4.0</span> · <span class="version-link" id="openVersions">View changelog</span></div>
       <div>This compare lab now opens both apps in a compact responsive embed mode and layers a synchronized shell around them.</div>
     </div>
   </main>
@@ -458,19 +458,19 @@
   <script>
     (() => {
       const APP_FILE = 'pong_compare.html';
-      const APP_VERSION = '1.3.0';
+      const APP_VERSION = '1.4.0';
       const HISTORY_FILE = 'pong_compare.versions.json';
       const EMBEDDED_HISTORY = {
-        latest: '1.3.0',
+        latest: '1.4.0',
         versions: [
           {
-            version: '1.3.0',
-            label: 'Responsive embed mode + smoother watch loops',
+            version: '1.4.0',
+            label: 'Aligned gameplay bands + lighter frame work',
             appFile: 'pong_compare.html',
             changes: [
-              'Loaded both apps in a compact embed mode so the full game canvases and side panels fit more cleanly inside the comparison layout.',
-              'Reduced jerkiness by making the watch loops delta-time aware and capping background training work per frame in the originating apps.',
-              'Kept the shared results panel and synchronized controls while tightening the iframe layout for side-by-side use.'
+              'Automatically aligns the visible gameplay areas so both canvases start at the same vertical band in the side-by-side layout.',
+              'Keeps both apps in compact responsive embed mode while preserving the shared compare shell and results panel.',
+              'Pairs with lighter originating-app watch loops that now avoid rewriting large stats blocks on every animation frame.'
             ]
           },
           {
@@ -648,6 +648,25 @@
         });
       }
 
+      function alignEmbeddedGameAreas() {
+        const docs = ['evolution', 'rl'].map((key) => ({ key, doc: getFrameDoc(key) })).filter((entry) => entry.doc);
+        if (docs.length < 2) return;
+
+        const offsets = docs.map(({ doc }) => {
+          const shell = doc.querySelector('.app-shell');
+          if (shell) shell.style.marginTop = '0px';
+          const canvas = doc.getElementById('game');
+          const shellAfterReset = doc.querySelector('.app-shell');
+          return { doc, shell: shellAfterReset, top: canvas ? canvas.getBoundingClientRect().top : 0 };
+        });
+
+        const targetTop = Math.max(...offsets.map((entry) => entry.top));
+        offsets.forEach(({ shell, top }) => {
+          if (!shell) return;
+          shell.style.marginTop = `${Math.max(0, Math.round(targetTop - top))}px`;
+        });
+      }
+
       function bindFrame(key) {
         const entry = frameState[key];
         updateStatus(key, `${key === 'evolution' ? 'Evolution' : 'RL'} frame: loading…`, 'loading');
@@ -658,7 +677,9 @@
             syncSpeed();
             syncCadence();
             syncCheckboxes();
+            alignEmbeddedGameAreas();
           }, 120);
+          window.setTimeout(alignEmbeddedGameAreas, 450);
         });
       }
 
@@ -779,6 +800,7 @@
       bindFrame('evolution');
       bindFrame('rl');
       window.setInterval(renderComparisonPanels, 350);
+      window.addEventListener('resize', alignEmbeddedGameAreas);
 
       document.getElementById('stepBoth').addEventListener('click', () => {
         runOnFrame('evolution', 'step');

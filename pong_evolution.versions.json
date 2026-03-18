@@ -1,6 +1,16 @@
 {
-  "latest": "1.5.0",
+  "latest": "1.5.1",
   "versions": [
+    {
+      "version": "1.5.1",
+      "label": "Throttled watch-panel updates",
+      "appFile": "pong_evolution.html",
+      "changes": [
+        "Kept the responsive embed mode so the full playfield still fits cleanly in the compare app.",
+        "Reduced perceived jerkiness by throttling expensive stats-panel rewrites during watch mode instead of doing a full DOM rewrite every frame.",
+        "Archived v1.5.0 under versions/1.5.0/pong_evolution.html after the earlier delta-time and responsive layout update."
+      ]
+    },
     {
       "version": "1.5.0",
       "label": "Responsive embed mode + smoother watch loop",

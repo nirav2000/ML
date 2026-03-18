@@ -1,6 +1,16 @@
 {
-  "latest": "1.2.0",
+  "latest": "1.2.1",
   "versions": [
+    {
+      "version": "1.2.1",
+      "label": "Throttled watch-panel updates",
+      "appFile": "pong_RL/pong_RL.html",
+      "changes": [
+        "Kept the responsive embed mode so the full playfield still fits cleanly in the compare app.",
+        "Reduced perceived jerkiness by throttling expensive stats-panel rewrites during watch mode instead of doing a full DOM rewrite every frame.",
+        "Archived v1.2.0 under pong_RL/versions/1.2.0/pong_RL.html after the earlier delta-time and responsive layout update."
+      ]
+    },
     {
       "version": "1.2.0",
       "label": "Responsive embed mode + smoother watch loop",

@@ -91,7 +91,7 @@
   </div>
 
   <div class="footer">
-    Version <span id="appVersion">1.5.1</span> · <span class="version-link" id="openVersions">View changelog</span>
+    Version <span id="appVersion">1.5.0</span> · <span class="version-link" id="openVersions">View changelog</span>
   </div>
 
   <div class="modal" id="versionsModal" aria-hidden="true">
@@ -107,19 +107,19 @@
 <script>
 (() => {
   const APP_FILE = "pong_evolution.html";
-  const APP_VERSION = "1.5.1";
+  const APP_VERSION = "1.5.0";
   const EMBED_MODE = new URLSearchParams(window.location.search).get('embed') === '1';
   const EMBEDDED_HISTORY = {
-    latest: "1.5.1",
+    latest: "1.5.0",
     versions: [
       {
-        version: "1.5.1",
-        label: "Throttled watch-panel updates",
+        version: "1.5.0",
+        label: "Responsive embed mode + smoother watch loop",
         appFile: "pong_evolution.html",
         changes: [
-          "Kept the responsive embed mode so the full playfield still fits cleanly in the compare app.",
-          "Reduced perceived jerkiness by throttling expensive stats-panel rewrites during watch mode instead of doing a full DOM rewrite every frame.",
-          "Archived v1.5.0 under versions/1.5.0/pong_evolution.html after the earlier delta-time and responsive layout update."
+          "Made the layout and canvases more responsive so the full playfield fits better in narrow or embedded layouts.",
+          "Added an embed mode used by the compare app to reduce spacing while keeping the full control set available.",
+          "Smoothed watch mode with delta-time stepping and capped background training work per frame; archived v1.4.1 under versions/1.4.1/pong_evolution.html."
         ]
       },
       {
@@ -661,7 +661,6 @@ ${extra}`;
     let stepBudget = 0;
     let trainBudget = 0;
     let lastFrameTime = performance.now();
-    let lastStatsPaint = 0;
 
     function stepOneTick() {
       const targetPlayer = ballY - PADDLE_H / 2;
@@ -737,10 +736,7 @@ ${extra}`;
       }
 
       drawScene(playerY, aiY, ballX, ballY, generation, fit, returned, points, conceded);
-      if (now - lastStatsPaint >= 140) {
-        updateStats('Watching continuously. Stop manually when desired.');
-        lastStatsPaint = now;
-      }
+      updateStats('Watching continuously. Stop manually when desired.');
       animId = requestAnimationFrame(loop);
     }
 
