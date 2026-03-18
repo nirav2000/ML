@@ -22,8 +22,8 @@
       "variant": "rl"
     },
     {
-      "slug": "piong-compare",
-      "title": "Piong Compare",
+      "slug": "pong-compare",
+      "title": "Pong Compare",
       "subtitle": "Evolution vs RL side-by-side",
       "tag": "Compare",
       "variant": "compare"
