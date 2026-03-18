@@ -204,7 +204,7 @@
     .frame-card p { margin: 0; color: var(--muted); line-height: 1.6; }
 
     .frame-wrap {
-      height: 1120px;
+      height: 980px;
       background: #ffffff;
     }
 
@@ -286,7 +286,7 @@
 
     @media (max-width: 1120px) {
       .hero-grid, .results-grid, .compare-grid, .note-grid { grid-template-columns: 1fr; }
-      .frame-wrap { height: 980px; }
+      .frame-wrap { height: 900px; }
       h1 { max-width: none; }
     }
   </style>
@@ -400,7 +400,7 @@
           <span class="chip">Generation loop</span>
         </header>
         <div class="frame-wrap">
-          <iframe id="frameEvolution" src="./pong_evolution.html" title="Pong Evolution app"></iframe>
+          <iframe id="frameEvolution" src="./pong_evolution.html?embed=1" title="Pong Evolution app"></iframe>
         </div>
       </article>
 
@@ -413,7 +413,7 @@
           <span class="chip">Episode loop</span>
         </header>
         <div class="frame-wrap">
-          <iframe id="frameRl" src="./pong_RL/pong_RL.html" title="Pong RL app"></iframe>
+          <iframe id="frameRl" src="./pong_RL/pong_RL.html?embed=1" title="Pong RL app"></iframe>
         </div>
       </article>
     </section>
@@ -440,8 +440,8 @@
     </section>
 
     <div class="footer">
-      <div>Version <span id="appVersion">1.1.0</span> · <span class="version-link" id="openVersions">View changelog</span></div>
-      <div>This compare lab keeps the original apps unchanged and layers a synchronized shell around them.</div>
+      <div>Version <span id="appVersion">1.3.0</span> · <span class="version-link" id="openVersions">View changelog</span></div>
+      <div>This compare lab now opens both apps in a compact responsive embed mode and layers a synchronized shell around them.</div>
     </div>
   </main>
 
@@ -458,11 +458,21 @@
   <script>
     (() => {
       const APP_FILE = 'pong_compare.html';
-      const APP_VERSION = '1.1.0';
+      const APP_VERSION = '1.3.0';
       const HISTORY_FILE = 'pong_compare.versions.json';
       const EMBEDDED_HISTORY = {
-        latest: '1.1.0',
+        latest: '1.3.0',
         versions: [
+          {
+            version: '1.3.0',
+            label: 'Responsive embed mode + smoother watch loops',
+            appFile: 'pong_compare.html',
+            changes: [
+              'Loaded both apps in a compact embed mode so the full game canvases and side panels fit more cleanly inside the comparison layout.',
+              'Reduced jerkiness by making the watch loops delta-time aware and capping background training work per frame in the originating apps.',
+              'Kept the shared results panel and synchronized controls while tightening the iframe layout for side-by-side use.'
+            ]
+          },
           {
             version: '1.1.0',
             label: 'Matched pacing + shared results summary',

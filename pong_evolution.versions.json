@@ -1,6 +1,16 @@
 {
-  "latest": "1.4.1",
+  "latest": "1.5.0",
   "versions": [
+    {
+      "version": "1.5.0",
+      "label": "Responsive embed mode + smoother watch loop",
+      "appFile": "pong_evolution.html",
+      "changes": [
+        "Made the layout and canvases more responsive so the full playfield fits better in narrow or embedded layouts.",
+        "Added an embed mode used by the compare app to reduce spacing while keeping the full control set available.",
+        "Smoothed watch mode with delta-time stepping and capped background training work per frame; archived v1.4.1 under versions/1.4.1/pong_evolution.html."
+      ]
+    },
     {
       "version": "1.4.1",
       "label": "Generation explanation + archive refresh",

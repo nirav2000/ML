@@ -1,6 +1,16 @@
 {
-  "latest": "1.1.0",
+  "latest": "1.2.0",
   "versions": [
+    {
+      "version": "1.2.0",
+      "label": "Responsive embed mode + smoother watch loop",
+      "appFile": "pong_RL/pong_RL.html",
+      "changes": [
+        "Made the layout and canvases more responsive so the full playfield fits better in narrow or embedded layouts.",
+        "Added an embed mode used by the compare app to reduce spacing while preserving the standalone controls and charts.",
+        "Smoothed watch mode with delta-time stepping and capped background training work per frame; archived v1.1.0 under pong_RL/versions/1.1.0/pong_RL.html."
+      ]
+    },
     {
       "version": "1.1.0",
       "label": "Checkpoint persistence + clearer RL comparisons",
