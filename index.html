@@ -3,443 +3,628 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ML Dashboard</title>
+  <title>ML Repo Dashboard</title>
   <style>
     :root {
       color-scheme: light;
-      --bg: #f4f7fb;
-      --panel: rgba(255, 255, 255, 0.88);
-      --panel-strong: #ffffff;
-      --text: #132033;
-      --muted: #53627a;
-      --accent: #4f7cff;
-      --accent-2: #16b3a3;
-      --border: rgba(19, 32, 51, 0.1);
-      --shadow: 0 24px 60px rgba(40, 61, 102, 0.15);
-      --radius: 24px;
+      --bg: #07111f;
+      --bg-soft: #0f1d33;
+      --panel: rgba(13, 24, 43, 0.86);
+      --panel-strong: #12213a;
+      --line: rgba(255, 255, 255, 0.1);
+      --text: #f3f7ff;
+      --muted: #a6b5cf;
+      --accent: #78a6ff;
+      --accent-2: #5fe2c2;
+      --accent-3: #ffc76b;
+      --shadow: 0 30px 80px rgba(0, 0, 0, 0.34);
+      --radius: 28px;
+      --maxw: 1180px;
     }
 
     * { box-sizing: border-box; }
 
+    html { scroll-behavior: smooth; }
+
     body {
       margin: 0;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      color: var(--text);
-      background:
-        radial-gradient(circle at top left, rgba(79, 124, 255, 0.18), transparent 30%),
-        radial-gradient(circle at top right, rgba(22, 179, 163, 0.15), transparent 28%),
-        linear-gradient(180deg, #f9fbff 0%, var(--bg) 100%);
       min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(120,166,255,0.16), transparent 26%),
+        radial-gradient(circle at 85% 10%, rgba(95,226,194,0.16), transparent 24%),
+        linear-gradient(180deg, #0a1426 0%, var(--bg) 100%);
+      color: var(--text);
     }
 
     a { color: inherit; }
 
     .shell {
-      width: min(1180px, calc(100% - 32px));
+      width: min(var(--maxw), calc(100% - 32px));
       margin: 0 auto;
-      padding: 32px 0 56px;
+      padding: 28px 0 64px;
+    }
+
+    .hero,
+    .panel {
+      background: linear-gradient(180deg, rgba(17, 31, 55, 0.92), rgba(10, 21, 38, 0.88));
+      border: 1px solid var(--line);
+      border-radius: 32px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
     }
 
     .hero {
-      background: linear-gradient(135deg, rgba(255,255,255,0.92), rgba(255,255,255,0.74));
-      border: 1px solid var(--border);
-      border-radius: 32px;
-      box-shadow: var(--shadow);
-      padding: 36px;
-      backdrop-filter: blur(10px);
-      margin-bottom: 28px;
+      position: relative;
+      overflow: hidden;
+      padding: 32px;
+    }
+
+    .hero::before,
+    .hero::after {
+      content: "";
+      position: absolute;
+      border-radius: 999px;
+      filter: blur(10px);
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    .hero::before {
+      width: 260px;
+      height: 260px;
+      right: -70px;
+      top: -90px;
+      background: radial-gradient(circle, rgba(120,166,255,0.34), transparent 70%);
+    }
+
+    .hero::after {
+      width: 220px;
+      height: 220px;
+      left: -60px;
+      bottom: -120px;
+      background: radial-gradient(circle, rgba(95,226,194,0.24), transparent 70%);
     }
 
     .eyebrow {
       display: inline-flex;
       align-items: center;
-      gap: 8px;
-      border-radius: 999px;
-      background: rgba(79, 124, 255, 0.1);
-      color: var(--accent);
+      gap: 10px;
       padding: 8px 14px;
-      font-size: 0.92rem;
+      border-radius: 999px;
+      background: rgba(120, 166, 255, 0.12);
+      border: 1px solid rgba(120, 166, 255, 0.22);
+      color: var(--accent);
+      font-size: 0.88rem;
       font-weight: 700;
-      letter-spacing: 0.02em;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
     }
 
     h1 {
-      font-size: clamp(2.2rem, 6vw, 4.2rem);
-      line-height: 1.02;
-      margin: 18px 0 14px;
-      max-width: 10ch;
+      margin: 18px 0 16px;
+      max-width: 12ch;
+      font-size: clamp(2.4rem, 6vw, 4.8rem);
+      line-height: 0.96;
+      letter-spacing: -0.04em;
     }
 
-    .hero p {
-      font-size: 1.05rem;
-      line-height: 1.7;
+    .hero-copy {
+      max-width: 65ch;
       color: var(--muted);
-      max-width: 66ch;
-      margin: 0;
+      line-height: 1.75;
+      font-size: 1.03rem;
+      margin-bottom: 24px;
     }
 
-    .quick-links,
-    .repo-links {
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.55fr) minmax(280px, 0.9fr);
+      gap: 20px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-actions,
+    .resource-links,
+    .card-actions,
+    .future-links {
       display: flex;
       flex-wrap: wrap;
       gap: 12px;
-      margin-top: 24px;
     }
 
-    .pill,
-    .repo-link,
-    .primary-link,
-    .secondary-link {
+    .button,
+    .button-secondary,
+    .link-chip,
+    .resource-link {
       display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
       text-decoration: none;
       border-radius: 999px;
-      transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+      transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
     }
 
-    .pill,
-    .repo-link {
-      padding: 11px 16px;
-      background: rgba(255,255,255,0.84);
-      border: 1px solid var(--border);
+    .button,
+    .button-secondary,
+    .resource-link,
+    .link-chip {
+      padding: 12px 16px;
+      font-weight: 700;
+      border: 1px solid transparent;
+    }
+
+    .button {
+      background: linear-gradient(135deg, var(--accent), #8a72ff);
+      color: #061120;
+      box-shadow: 0 18px 32px rgba(120, 166, 255, 0.25);
+    }
+
+    .button-secondary,
+    .resource-link,
+    .link-chip {
+      background: rgba(255,255,255,0.04);
+      border-color: var(--line);
       color: var(--text);
-      font-weight: 600;
     }
 
-    .pill:hover,
-    .repo-link:hover,
-    .primary-link:hover,
-    .secondary-link:hover,
-    .card:hover {
+    .button:hover,
+    .button-secondary:hover,
+    .resource-link:hover,
+    .link-chip:hover,
+    .app-card:hover {
       transform: translateY(-2px);
     }
 
-    .grid {
+    .hero-side {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
-      gap: 22px;
-      margin-top: 24px;
+      gap: 14px;
+      align-content: start;
     }
 
-    .card {
+    .mini-stat {
+      padding: 18px;
+      border-radius: 22px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--line);
+    }
+
+    .mini-stat strong {
+      display: block;
+      font-size: 1.9rem;
+      margin-bottom: 6px;
+      color: white;
+    }
+
+    .mini-stat span {
+      color: var(--muted);
+      line-height: 1.6;
+      display: block;
+    }
+
+    .section-heading {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 16px;
+      margin: 34px 0 16px;
+    }
+
+    .section-heading h2 {
+      margin: 0;
+      font-size: 1.35rem;
+    }
+
+    .section-heading p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .app-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 22px;
+    }
+
+    .app-card {
+      overflow: hidden;
       display: flex;
       flex-direction: column;
-      min-height: 100%;
-      background: var(--panel);
-      border: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(17, 31, 55, 0.92), rgba(8, 18, 33, 0.94));
+      border: 1px solid var(--line);
       border-radius: var(--radius);
-      overflow: hidden;
       box-shadow: var(--shadow);
-      backdrop-filter: blur(10px);
-      transition: transform 0.18s ease, box-shadow 0.18s ease;
+      transition: transform 0.18s ease, border-color 0.18s ease;
     }
 
-    .preview {
+    .app-card:hover { border-color: rgba(120,166,255,0.35); }
+
+    .card-art {
       position: relative;
-      min-height: 230px;
-      background: linear-gradient(135deg, rgba(79,124,255,0.16), rgba(22,179,163,0.15));
+      aspect-ratio: 16 / 10;
       overflow: hidden;
-      border-bottom: 1px solid var(--border);
+      background: linear-gradient(135deg, rgba(120,166,255,0.18), rgba(95,226,194,0.12));
+      border-bottom: 1px solid var(--line);
     }
 
-    .preview iframe {
-      position: absolute;
-      inset: 0;
-      width: 180%;
-      height: 180%;
-      border: 0;
-      transform: scale(0.56);
-      transform-origin: top left;
-      pointer-events: none;
-      background: white;
+    .card-art img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+      object-position: center;
     }
 
-    .preview::after {
-      content: "Preview";
+    .art-label {
       position: absolute;
       top: 14px;
       right: 14px;
-      background: rgba(255,255,255,0.88);
-      color: var(--muted);
-      font-size: 0.78rem;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      padding: 7px 10px;
       border-radius: 999px;
-      border: 1px solid rgba(19,32,51,0.08);
-    }
-
-    .placeholder {
-      display: grid;
-      place-items: center;
-      height: 100%;
-      min-height: 230px;
-      padding: 24px;
-      text-align: center;
-      background:
-        radial-gradient(circle at top, rgba(79,124,255,0.26), transparent 44%),
-        linear-gradient(135deg, rgba(255,255,255,0.95), rgba(232,239,255,0.82));
-    }
-
-    .placeholder-art {
-      width: min(220px, 100%);
-      aspect-ratio: 1.1;
-      border-radius: 28px;
-      display: grid;
-      place-items: center;
-      border: 1px dashed rgba(79,124,255,0.35);
-      background: rgba(255,255,255,0.66);
-      color: var(--accent);
-      font-weight: 800;
-      letter-spacing: 0.06em;
+      padding: 7px 10px;
+      background: rgba(6, 17, 32, 0.78);
+      border: 1px solid rgba(255,255,255,0.12);
+      font-size: 0.74rem;
       text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #d9e5ff;
+      font-weight: 700;
     }
 
-    .content {
-      display: flex;
-      flex-direction: column;
+    .card-body {
+      display: grid;
       gap: 16px;
       padding: 22px;
-      flex: 1;
+      height: 100%;
     }
 
-    .card-header {
+    .card-head {
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
       gap: 14px;
     }
 
-    .card h2 {
-      margin: 0;
-      font-size: 1.35rem;
+    .card-head h3 {
+      margin: 0 0 6px;
+      font-size: 1.4rem;
     }
 
-    .version {
+    .version-pill {
       flex-shrink: 0;
-      border-radius: 999px;
       padding: 8px 12px;
-      background: rgba(79,124,255,0.1);
-      color: var(--accent);
-      font-size: 0.84rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
       font-weight: 800;
-      letter-spacing: 0.03em;
+      letter-spacing: 0.04em;
+      background: rgba(120,166,255,0.12);
+      color: var(--accent);
+      border: 1px solid rgba(120,166,255,0.22);
     }
 
-    .description,
-    .meta-list li,
-    .future-note {
+    .summary,
+    .meta-block p,
+    .future-card p,
+    li {
       color: var(--muted);
-      line-height: 1.65;
+      line-height: 1.68;
     }
 
-    .meta {
+    .meta-grid {
       display: grid;
-      gap: 10px;
+      gap: 12px;
     }
 
-    .meta strong {
-      display: inline-block;
-      margin-bottom: 4px;
-      color: var(--text);
+    .meta-block strong {
+      display: block;
+      margin-bottom: 6px;
+      color: white;
+      font-size: 0.97rem;
     }
 
-    .meta-list {
+    ul {
       margin: 0;
       padding-left: 18px;
     }
 
-    .actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-top: auto;
-      padding-top: 4px;
+    .card-actions { margin-top: auto; }
+
+    .panel {
+      padding: 24px;
+      margin-top: 28px;
     }
 
-    .primary-link,
-    .secondary-link {
-      padding: 12px 16px;
-      font-weight: 700;
-      border: 1px solid transparent;
+    .resource-links {
+      margin-top: 16px;
     }
 
-    .primary-link {
-      background: linear-gradient(135deg, var(--accent), #6d5efc);
-      color: white;
-      box-shadow: 0 16px 32px rgba(79, 124, 255, 0.22);
+    .resource-link {
+      min-height: 52px;
+      justify-content: flex-start;
     }
 
-    .secondary-link {
-      border-color: var(--border);
-      background: rgba(255,255,255,0.9);
-      color: var(--text);
+    .future-card {
+      display: grid;
+      gap: 16px;
+      padding: 24px;
+      border-radius: var(--radius);
+      background:
+        radial-gradient(circle at top, rgba(255,199,107,0.16), transparent 35%),
+        linear-gradient(180deg, rgba(18, 33, 58, 0.95), rgba(10, 20, 36, 0.95));
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: var(--shadow);
     }
 
-    .section-title {
-      margin: 34px 0 14px;
-      font-size: 1.2rem;
+    .future-badge {
+      display: inline-flex;
+      width: fit-content;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,199,107,0.12);
+      border: 1px solid rgba(255,199,107,0.24);
+      color: var(--accent-3);
+      font-weight: 800;
+      font-size: 0.8rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
     }
 
     footer {
       margin-top: 28px;
-      padding: 22px 0 6px;
       color: var(--muted);
-      font-size: 0.95rem;
+      text-align: center;
+      line-height: 1.7;
     }
 
-    @media (max-width: 720px) {
-      .hero { padding: 26px 20px; }
-      .content { padding: 18px; }
-      .preview iframe {
-        width: 220%;
-        height: 220%;
-        transform: scale(0.45);
-      }
+    @media (max-width: 900px) {
+      .hero-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 700px) {
+      .shell { width: min(var(--maxw), calc(100% - 20px)); }
+      .hero, .panel, .future-card { padding: 20px; }
+      .card-body { padding: 18px; }
+      .section-heading { align-items: start; flex-direction: column; }
+      .card-head { flex-direction: column; }
     }
   </style>
 </head>
 <body>
   <main class="shell">
     <section class="hero">
-      <div class="eyebrow">Dashboard · ML app showcase</div>
-      <h1>Explore the apps in this repo.</h1>
-      <p>
-        This landing page gives the repository a friendly front door: jump straight into each app,
-        scan what version is currently live, see a visual preview, and understand what concepts you
-        will learn before you click through.
-      </p>
-      <div class="quick-links">
-        <a class="pill" href="#apps">Browse apps</a>
-        <a class="pill" href="#repo-resources">Repo resources</a>
-        <a class="pill" href="./ML101.html">Open ML101</a>
-        <a class="pill" href="./pong_evolution.html">Open Pong Evolution</a>
+      <div class="hero-grid">
+        <div>
+          <div class="eyebrow">Dashboard · Interactive experiments</div>
+          <h1>Launch, learn, and explore this repo.</h1>
+          <p class="hero-copy">
+            A friendly landing page for the machine-learning experiments in this repository. Browse the
+            current apps, preview what each project is about, see the current version, and jump to the
+            right documentation before you dive in.
+          </p>
+          <div class="hero-actions">
+            <a class="button" href="#apps">Browse apps</a>
+            <a class="button-secondary" href="./README.md">Open README</a>
+            <a class="button-secondary" href="#resources">Repo resources</a>
+          </div>
+        </div>
+        <aside class="hero-side" aria-label="Repository summary">
+          <div class="mini-stat">
+            <strong>2</strong>
+            <span>Interactive apps currently highlighted: ML101 and Pong Evolution.</span>
+          </div>
+          <div class="mini-stat">
+            <strong>Versioned</strong>
+            <span>Both projects expose their iteration history so visitors can track how they evolved.</span>
+          </div>
+          <div class="mini-stat">
+            <strong>Expandable</strong>
+            <span>The dashboard includes a reusable area for future demos, experiments, and learning tools.</span>
+          </div>
+        </aside>
       </div>
     </section>
 
     <section id="apps" aria-labelledby="apps-title">
-      <h2 class="section-title" id="apps-title">Current apps</h2>
-      <div class="grid">
-        <article class="card">
-          <div class="preview" aria-label="Live preview of ML101">
-            <iframe src="./ML101.html" title="ML101 preview" loading="lazy"></iframe>
-          </div>
-          <div class="content">
-            <div class="card-header">
-              <h2>ML101</h2>
-              <span class="version">v0.1.6</span>
-            </div>
-            <p class="description">
-              A compact, interactive machine-learning playground that lets you experiment with model
-              behavior in a beginner-friendly, visual format.
-            </p>
-            <div class="meta">
-              <div>
-                <strong>What to expect</strong>
-                <div class="description">Hands-on controls, immediate feedback, and lightweight experimentation without leaving the browser.</div>
-              </div>
-              <div>
-                <strong>What you can learn</strong>
-                <ul class="meta-list">
-                  <li>How tuning inputs changes model behavior.</li>
-                  <li>How simple ML ideas can be explored visually.</li>
-                  <li>How versions and iteration improve an educational app over time.</li>
-                </ul>
-              </div>
-            </div>
-            <div class="actions">
-              <a class="primary-link" href="./ML101.html">Launch ML101</a>
-              <a class="secondary-link" href="./VERSION_HISTORY.md">Version history</a>
-            </div>
-          </div>
-        </article>
+      <div class="section-heading">
+        <div>
+          <h2 id="apps-title">Current apps</h2>
+          <p>Each card includes a visual preview, a short overview, the live version, and what a learner should expect.</p>
+        </div>
+      </div>
+      <div class="app-grid" id="appGrid"></div>
+    </section>
 
-        <article class="card">
-          <div class="preview" aria-label="Live preview of Pong Evolution">
-            <iframe src="./pong_evolution.html" title="Pong Evolution preview" loading="lazy"></iframe>
-          </div>
-          <div class="content">
-            <div class="card-header">
-              <h2>Pong Evolution</h2>
-              <span class="version">v1.4.1</span>
-            </div>
-            <p class="description">
-              A plain JavaScript evolution demo where pong agents improve through repeated mutation,
-              selection, and fast simulation.
-            </p>
-            <div class="meta">
-              <div>
-                <strong>What to expect</strong>
-                <div class="description">Arcade-style visuals paired with an approachable introduction to search, optimization, and iterative agent improvement.</div>
-              </div>
-              <div>
-                <strong>What you can learn</strong>
-                <ul class="meta-list">
-                  <li>How mutation and selection can improve gameplay agents.</li>
-                  <li>How lightweight browser simulations can explain evolutionary strategies.</li>
-                  <li>How to compare current and archived versions of a single-file app.</li>
-                </ul>
-              </div>
-            </div>
-            <div class="actions">
-              <a class="primary-link" href="./pong_evolution.html">Launch Pong Evolution</a>
-              <a class="secondary-link" href="./pong_evolution.versions.json">Changelog data</a>
-            </div>
-          </div>
-        </article>
-
-        <article class="card">
-          <div class="placeholder" aria-label="Placeholder card for future apps">
-            <div>
-              <div class="placeholder-art">Future Apps</div>
-              <p class="future-note">This space is reserved for the next experiments, demos, and learning tools added to the repository.</p>
-            </div>
-          </div>
-          <div class="content">
-            <div class="card-header">
-              <h2>Coming soon</h2>
-              <span class="version">Planned</span>
-            </div>
-            <p class="description">
-              New cards can be added here as the repo grows, keeping a consistent catalog for future educational apps and prototypes.
-            </p>
-            <div class="meta">
-              <div>
-                <strong>Suggested metadata to add</strong>
-                <ul class="meta-list">
-                  <li>App preview image or embedded live thumbnail.</li>
-                  <li>Current version and release notes.</li>
-                  <li>Short description plus learning outcomes.</li>
-                </ul>
-              </div>
-            </div>
-            <div class="actions">
-              <a class="secondary-link" href="#repo-resources">Review repo resources</a>
-            </div>
-          </div>
-        </article>
+    <section class="panel" id="resources" aria-labelledby="resources-title">
+      <div class="section-heading" style="margin-top:0;">
+        <div>
+          <h2 id="resources-title">Relevant repo resources</h2>
+          <p>Quick links to documentation, version notes, and archive folders that support the current apps and future work.</p>
+        </div>
+      </div>
+      <div class="resource-links">
+        <a class="resource-link" href="./README.md">README overview</a>
+        <a class="resource-link" href="./VERSION_HISTORY.md">ML101 version history</a>
+        <a class="resource-link" href="./ML101_versions/README.md">ML101 archive README</a>
+        <a class="resource-link" href="./version_archive_system.md">Version archive system notes</a>
+        <a class="resource-link" href="./ML101_versions/smart_sync_notes.md">Future development notes</a>
+        <a class="resource-link" href="./versions/">Pong archived versions</a>
+        <a class="resource-link" href="./ML101_versions/">ML101 archived versions</a>
       </div>
     </section>
 
-    <section id="repo-resources" aria-labelledby="resources-title">
-      <h2 class="section-title" id="resources-title">Relevant repo resources</h2>
-      <div class="repo-links">
-        <a class="repo-link" href="./ML101_versions/README.md">ML101 archive README</a>
-        <a class="repo-link" href="./VERSION_HISTORY.md">ML101 version history</a>
-        <a class="repo-link" href="./version_archive_system.md">Version archive system</a>
-        <a class="repo-link" href="./ML101_versions/smart_sync_notes.md">Future development notes</a>
-        <a class="repo-link" href="./ML101_versions/">ML101 archived versions</a>
-        <a class="repo-link" href="./versions/">Pong archived versions</a>
+    <section style="margin-top: 28px;">
+      <div class="future-card">
+        <span class="future-badge">Future apps</span>
+        <div>
+          <h2 style="margin:0 0 10px;">Room for the next experiment</h2>
+          <p style="margin:0;">
+            When a new app lands in the repository, add one more card with an image, version, launch
+            link, description, and learning outcomes. The layout is designed to grow without needing a redesign.
+          </p>
+        </div>
+        <div class="future-links">
+          <a class="link-chip" href="#apps">Use the current cards as a template</a>
+          <a class="link-chip" href="#resources">Link future docs here too</a>
+        </div>
       </div>
     </section>
 
     <footer>
-      Designed as a simple repository dashboard so visitors can discover apps, launch them quickly,
-      and understand what each project teaches.
+      Built as a simple repo front door so visitors can discover the apps quickly and understand what they will learn before opening them.
     </footer>
   </main>
+
+  <script>
+    const appCatalog = [
+      {
+        name: "ML101",
+        version: "v0.1.6",
+        href: "./ML101.html",
+        artLabel: "Snapshot",
+        image: createMl101Preview(),
+        description:
+          "A compact machine-learning playground focused on interactive, beginner-friendly experimentation directly in the browser.",
+        expect:
+          "You can expect immediate feedback, simple controls, and an educational environment for trying ideas without a local setup.",
+        learn: [
+          "How changing inputs and controls affects an ML-focused interactive experience.",
+          "How visual explanations make abstract ML concepts easier to understand.",
+          "How a small educational app evolves across versions."
+        ],
+        links: [
+          { label: "Launch ML101", href: "./ML101.html", primary: true },
+          { label: "Version history", href: "./VERSION_HISTORY.md", primary: false },
+          { label: "Archive notes", href: "./ML101_versions/README.md", primary: false }
+        ]
+      },
+      {
+        name: "Pong Evolution",
+        version: "v1.4.1",
+        href: "./pong_evolution.html",
+        artLabel: "Illustrated preview",
+        image: createPongPreview(),
+        description:
+          "An evolutionary JavaScript demo where pong agents improve through mutation, selection, and repeated simulation.",
+        expect:
+          "You can expect arcade energy, visible training feedback, and a concrete example of iterative optimization in a browser app.",
+        learn: [
+          "How mutation and selection can improve simple game-playing agents.",
+          "How simulations can make evolutionary strategies intuitive.",
+          "How changelogs and archived builds support experimentation over time."
+        ],
+        links: [
+          { label: "Launch Pong Evolution", href: "./pong_evolution.html", primary: true },
+          { label: "Changelog data", href: "./pong_evolution.versions.json", primary: false },
+          { label: "Archived versions", href: "./versions/", primary: false }
+        ]
+      }
+    ];
+
+    const appGrid = document.getElementById("appGrid");
+
+    appCatalog.forEach((app) => {
+      const article = document.createElement("article");
+      article.className = "app-card";
+      article.innerHTML = `
+        <a class="card-art" href="${app.href}" aria-label="Open ${app.name}">
+          <img src="${app.image}" alt="Illustrated preview for ${app.name}" />
+          <span class="art-label">${app.artLabel}</span>
+        </a>
+        <div class="card-body">
+          <div class="card-head">
+            <div>
+              <h3>${app.name}</h3>
+              <div class="summary">${app.description}</div>
+            </div>
+            <span class="version-pill">${app.version}</span>
+          </div>
+          <div class="meta-grid">
+            <div class="meta-block">
+              <strong>What to expect</strong>
+              <p>${app.expect}</p>
+            </div>
+            <div class="meta-block">
+              <strong>What you can learn</strong>
+              <ul>${app.learn.map((item) => `<li>${item}</li>`).join("")}</ul>
+            </div>
+          </div>
+          <div class="card-actions">
+            ${app.links.map((link) => `<a class="${link.primary ? "button" : "button-secondary"}" href="${link.href}">${link.label}</a>`).join("")}
+          </div>
+        </div>
+      `;
+      appGrid.appendChild(article);
+    });
+
+    function createMl101Preview() {
+      const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" role="img" aria-label="ML101 preview artwork">
+          <defs>
+            <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#eff5ff"/>
+              <stop offset="100%" stop-color="#d9f7ef"/>
+            </linearGradient>
+            <linearGradient id="card" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="100%" stop-color="#eef3ff"/>
+            </linearGradient>
+          </defs>
+          <rect width="800" height="500" rx="36" fill="url(#bg)"/>
+          <rect x="30" y="28" width="740" height="444" rx="26" fill="#0f1d33" opacity="0.08"/>
+          <rect x="52" y="46" width="696" height="400" rx="24" fill="url(#card)"/>
+          <rect x="82" y="84" width="190" height="320" rx="18" fill="#ffffff" stroke="#d4e3ff"/>
+          <rect x="302" y="84" width="416" height="182" rx="18" fill="#13284a"/>
+          <polyline points="330,210 380,172 430,190 485,132 540,156 596,112 648,138 690,100" fill="none" stroke="#78a6ff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="690" cy="100" r="9" fill="#5fe2c2"/>
+          <rect x="302" y="288" width="200" height="116" rx="18" fill="#ffffff" stroke="#d4e3ff"/>
+          <rect x="518" y="288" width="200" height="116" rx="18" fill="#ffffff" stroke="#d4e3ff"/>
+          <rect x="100" y="110" width="118" height="16" rx="8" fill="#bed1ff"/>
+          <rect x="100" y="148" width="144" height="14" rx="7" fill="#e5edff"/>
+          <rect x="100" y="180" width="144" height="14" rx="7" fill="#e5edff"/>
+          <rect x="100" y="212" width="124" height="14" rx="7" fill="#e5edff"/>
+          <rect x="100" y="260" width="130" height="38" rx="19" fill="#78a6ff"/>
+          <rect x="100" y="316" width="150" height="12" rx="6" fill="#e5edff"/>
+          <rect x="100" y="340" width="136" height="12" rx="6" fill="#e5edff"/>
+          <rect x="100" y="364" width="96" height="12" rx="6" fill="#e5edff"/>
+          <text x="82" y="72" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#17345d">ML101</text>
+          <text x="326" y="126" font-family="Arial, sans-serif" font-size="26" font-weight="700" fill="#ffffff">Interactive model behavior</text>
+          <text x="326" y="325" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#17345d">Experiment</text>
+          <text x="542" y="325" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#17345d">Learn</text>
+        </svg>`;
+      return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+    }
+
+    function createPongPreview() {
+      const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" role="img" aria-label="Pong Evolution preview artwork">
+          <defs>
+            <linearGradient id="bg2" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#07111f"/>
+              <stop offset="100%" stop-color="#14385b"/>
+            </linearGradient>
+          </defs>
+          <rect width="800" height="500" rx="36" fill="url(#bg2)"/>
+          <rect x="38" y="38" width="724" height="424" rx="28" fill="#08182c" stroke="#284b75"/>
+          <line x1="400" y1="70" x2="400" y2="430" stroke="#dce9ff" stroke-width="8" stroke-dasharray="14 18" opacity="0.9"/>
+          <rect x="86" y="154" width="18" height="110" rx="9" fill="#78a6ff"/>
+          <rect x="696" y="220" width="18" height="110" rx="9" fill="#5fe2c2"/>
+          <circle cx="430" cy="204" r="16" fill="#ffffff"/>
+          <path d="M494 112 C560 132, 598 184, 612 244" fill="none" stroke="#ffc76b" stroke-width="8" stroke-linecap="round"/>
+          <path d="M512 130 L494 112 L519 108" fill="none" stroke="#ffc76b" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+          <rect x="74" y="72" width="130" height="48" rx="18" fill="#102540" stroke="#284b75"/>
+          <rect x="596" y="72" width="130" height="48" rx="18" fill="#102540" stroke="#284b75"/>
+          <text x="106" y="104" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#dce9ff">12</text>
+          <text x="628" y="104" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#dce9ff">18</text>
+          <rect x="76" y="370" width="240" height="58" rx="18" fill="#0f2139" stroke="#284b75"/>
+          <rect x="338" y="370" width="386" height="58" rx="18" fill="#0f2139" stroke="#284b75"/>
+          <text x="96" y="405" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#5fe2c2">Generation 148</text>
+          <text x="358" y="405" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#dce9ff">Mutation · Selection · Improvement</text>
+          <text x="70" y="332" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#ffffff">Pong Evolution</text>
+        </svg>`;
+      return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+    }
+  </script>
 </body>
 </html>
