@@ -409,20 +409,7 @@
             <a class="button-secondary" href="#resources">Repo resources</a>
           </div>
         </div>
-        <aside class="hero-side" aria-label="Repository summary">
-          <div class="mini-stat">
-            <strong>2</strong>
-            <span>Interactive apps currently highlighted: ML101 and Pong Evolution.</span>
-          </div>
-          <div class="mini-stat">
-            <strong>Versioned</strong>
-            <span>Both projects expose their iteration history so visitors can track how they evolved.</span>
-          </div>
-          <div class="mini-stat">
-            <strong>Expandable</strong>
-            <span>The dashboard includes a reusable area for future demos, experiments, and learning tools.</span>
-          </div>
-        </aside>
+        <aside class="hero-side" aria-label="Repository summary" id="heroStats"></aside>
       </div>
     </section>
 
@@ -544,6 +531,9 @@
     ];
 
     const appGrid = document.getElementById("appGrid");
+    const heroStats = document.getElementById("heroStats");
+
+    renderHeroStats(appCatalog);
 
     appCatalog.forEach((app) => {
       const article = document.createElement("article");
@@ -578,6 +568,33 @@
       `;
       appGrid.appendChild(article);
     });
+
+    function renderHeroStats(apps) {
+      const appCount = apps.length;
+      const versionedCount = apps.filter((app) => app.version && app.version.trim()).length;
+      const appNames = apps.map((app) => app.name).join(", ");
+      const learningTopics = new Set(apps.flatMap((app) => app.learn || []));
+
+      heroStats.innerHTML = [
+        {
+          value: String(appCount),
+          description: `${appCount === 1 ? "Interactive app currently highlighted" : "Interactive apps currently highlighted"}: ${appNames}.`
+        },
+        {
+          value: `${versionedCount}/${appCount}`,
+          description: `${versionedCount === appCount ? "Every listed app includes visible version metadata." : "Some apps still need version metadata added to the dashboard."}`
+        },
+        {
+          value: `${learningTopics.size}+`,
+          description: "Distinct learning outcomes are already captured in the catalog, and this summary updates automatically as new apps are added."
+        }
+      ].map((stat) => `
+        <div class="mini-stat">
+          <strong>${stat.value}</strong>
+          <span>${stat.description}</span>
+        </div>
+      `).join("");
+    }
 
     function createMl101Preview() {
       const svg = `
