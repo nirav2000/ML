@@ -27,6 +27,13 @@
       "subtitle": "Evolution vs RL side-by-side",
       "tag": "Compare",
       "variant": "compare"
+    },
+    {
+      "slug": "pong-duel",
+      "title": "Pong Duel",
+      "subtitle": "Head-to-head arena showdown",
+      "tag": "Duel",
+      "variant": "duel"
     }
   ]
 }

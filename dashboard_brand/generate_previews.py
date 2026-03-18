@@ -26,12 +26,14 @@ def build_svg(entry: dict) -> str:
         "evolution": ("#78a6ff", "#ffc76b"),
         "rl": ("#5fe2c2", "#78a6ff"),
         "compare": ("#ffc76b", "#5fe2c2"),
+        "duel": ("#ff8a7a", "#78a6ff"),
     }.get(variant, ("#78a6ff", "#5fe2c2"))
     art = {
         "ml": ml_art(),
         "evolution": evolution_art(),
         "rl": rl_art(),
         "compare": compare_art(),
+        "duel": duel_art(),
     }.get(variant, generic_art())
     return f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" role="img" aria-label="{title} preview">
   <defs>
@@ -134,6 +136,25 @@ def compare_art() -> str:
     <text x="148" y="586" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#ffc76b">Population score</text>
     <text x="688" y="586" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#5fe2c2">Episode reward</text>
     '''
+
+
+def duel_art() -> str:
+    return '''
+    <rect x="86" y="286" width="1028" height="342" rx="30" fill="#0c1730" stroke="#29536b"/>
+    <line x1="600" y1="320" x2="600" y2="598" stroke="#dce9ff" stroke-width="8" stroke-dasharray="14 18" opacity="0.8"/>
+    <rect x="126" y="404" width="18" height="118" rx="9" fill="#ff8a7a"/>
+    <rect x="1056" y="416" width="18" height="118" rx="9" fill="#78a6ff"/>
+    <circle cx="600" cy="468" r="16" fill="#ffffff"/>
+    <path d="M450 364 C510 338, 560 338, 600 372" fill="none" stroke="#ff8a7a" stroke-width="12" stroke-linecap="round"/>
+    <path d="M750 364 C690 338, 640 338, 600 372" fill="none" stroke="#78a6ff" stroke-width="12" stroke-linecap="round"/>
+    <rect x="118" y="316" width="220" height="54" rx="20" fill="#102540" stroke="#284b75"/>
+    <rect x="862" y="316" width="220" height="54" rx="20" fill="#102540" stroke="#284b75"/>
+    <text x="150" y="350" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#ffb2a8">Evolution</text>
+    <text x="940" y="350" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#a9c4ff">RL</text>
+    <rect x="400" y="552" width="400" height="48" rx="18" fill="#0f2139" stroke="#284b75"/>
+    <text x="456" y="583" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#dce9ff">Shared arena · direct matchup</text>
+    '''
+
 
 
 def generic_art() -> str:
