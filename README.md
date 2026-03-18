@@ -7,6 +7,41 @@ This repository contains interactive browser-based experiments focused on machin
 - `ML101.html` — interactive ML-focused playground.
 - `pong_evolution.html` — evolutionary Pong simulation.
 
+## Pong apps
+
+### `pong_evolution.html`
+`pong_evolution.html` is a Pong app where the blue paddle is controlled by a small neural network, but the network is **not** trained with standard backpropagation-based reinforcement learning. Instead, it uses **neuroevolution**: a genetic algorithm evaluates a whole population of neural-network controllers, keeps the best performers, and creates the next population by mutating copies of those stronger bots.
+
+#### What a generation means
+In the neuroevolution app, one **generation** is one full population-level training cycle:
+1. evaluate all bots,
+2. assign fitness from how well each bot plays,
+3. keep a small elite set unchanged,
+4. mutate copies of those elites to form the next generation.
+
+The charts and generation log in this app therefore summarize how the **population** is improving from one generation to the next, rather than how a single agent improves step-by-step.
+
+### `pong_RL`
+A `pong_RL` style app would represent the more standard reinforcement-learning setup: a **single agent** improves from experience over time, with training organized around **rewards** and **episodes** instead of evolutionary generations. In that style of app, the agent interacts with the environment, receives reward signals, and updates its policy or value estimates from those experiences.
+
+That differs from neuroevolution because reinforcement learning usually trains one policy directly from reward feedback, while neuroevolution scores many candidate policies, selects the fittest ones, and searches by mutation/selection rather than gradient-based updates.
+
+> Note: this repository currently ships `pong_evolution.html` as the dedicated Pong app. For the runnable reward/episode-based learning example already present in the repo, open `ML101.html`.
+
+### Comparison
+
+| Topic | `pong_evolution.html` | `pong_RL` style app |
+| --- | --- | --- |
+| Optimization method | Neuroevolution / genetic algorithm over neural-network weights | Reinforcement learning from experience and reward |
+| Unit of progress | **Generation** | **Episode** |
+| Number of agents trained | Many bots are evaluated each generation | Usually one learning agent is trained over many episodes |
+| What charts / metrics mean | Population metrics such as best fitness, average fitness, returns, points, and conceded values per generation | Learning metrics such as episode reward, episode length, success rate, loss/value estimates, or moving averages over episodes |
+
+### Runnable entry points
+- [Open Pong Evolution](./pong_evolution.html)
+- [Open the repo dashboard](./index.html)
+- [Open the reward/episode-based learning example currently in the repo (`ML101.html`)](./ML101.html)
+
 ## Supporting docs
 - `VERSION_HISTORY.md` — ML101 version notes.
 - `ML101_versions/README.md` — ML101 archive details.
