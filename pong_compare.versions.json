@@ -1,6 +1,16 @@
 {
-  "latest": "1.0.0",
+  "latest": "1.1.0",
   "versions": [
+    {
+      "version": "1.1.0",
+      "label": "Matched pacing + shared results summary",
+      "appFile": "pong_compare.html",
+      "changes": [
+        "Reworked shared cadence controls so Evolution and RL now receive the same numeric training tick rate instead of percentages of different slider maxima.",
+        "Added a shared comparison results panel that extracts live metrics from both embedded apps and summarizes them side by side.",
+        "Adjusted the batch-advance mapping so the top-level controls move both apps forward more evenly."
+      ]
+    },
     {
       "version": "1.0.0",
       "label": "Initial side-by-side comparison lab",

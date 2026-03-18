@@ -62,6 +62,8 @@ As more apps are added, they can be listed on `index.html` with:
 
 ## Pong compare lab
 
-`pong_compare.html` is a comparison shell that embeds both Pong apps side by side so you can inspect them in one browser view while still keeping each original app intact. It adds synchronized controls for common actions like stepping training forward, watching both policies, stopping animation, resetting both apps, and aligning playback speed / training cadence values.
+`pong_compare.html` is a comparison shell that embeds both Pong apps side by side so you can inspect them in one browser view while still keeping each original app intact. It adds synchronized controls for common actions like stepping training forward, watching both policies, stopping animation, resetting both apps, and aligning playback speed / matched training cadence values.
+
+The compare lab now also includes a shared side-by-side results panel that pulls headline metrics out of both embedded apps, so you can compare progress, current pacing, and best-so-far values without constantly scanning both native sidebars.
 
 Because the compare lab reuses the original apps inside same-origin iframes, you can still use all native controls inside each panel when you want app-specific behavior, but the top-level page makes quick A/B comparisons much easier.

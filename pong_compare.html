@@ -215,6 +215,7 @@
       background: #fff;
     }
 
+    .results-grid,
     .note-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -222,8 +223,46 @@
       margin-bottom: 22px;
     }
 
-    .note-card { padding: 20px; }
+    .note-card,
+    .results-card { padding: 20px; }
     .note-card ul { margin: 10px 0 0 18px; color: var(--muted); line-height: 1.7; }
+
+    .results-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+    }
+
+    .results-card header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: start;
+      margin-bottom: 14px;
+    }
+
+    .results-card h3,
+    .results-card h4 { margin: 0; }
+
+    .result-table {
+      display: grid;
+      gap: 10px;
+    }
+
+    .result-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      gap: 12px;
+      align-items: center;
+      padding: 10px 12px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .result-row strong { font-size: 0.92rem; }
+    .result-row span { color: var(--muted); font-size: 0.92rem; }
+    .result-row code { color: var(--text); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 
     .footer {
       font-size: 0.92rem;
@@ -246,7 +285,7 @@
     .version-item ul { margin: 8px 0 0 18px; color:#42516a; }
 
     @media (max-width: 1120px) {
-      .hero-grid, .compare-grid, .note-grid { grid-template-columns: 1fr; }
+      .hero-grid, .results-grid, .compare-grid, .note-grid { grid-template-columns: 1fr; }
       .frame-wrap { height: 980px; }
       h1 { max-width: none; }
     }
@@ -273,7 +312,7 @@
           </div>
           <div class="mini-card">
             <strong>1</strong>
-            <span>Common control bar for synchronized watch, reset, speed, auto-train, and step actions.</span>
+            <span>Common control bar for synchronized watch, reset, speed, auto-train, step actions, and live comparison readouts.</span>
           </div>
           <div class="mini-card">
             <strong>Live</strong>
@@ -304,9 +343,9 @@
             <input id="globalSpeed" type="range" min="0.25" max="8" step="0.25" value="1" />
             <span id="globalSpeedValue">1.00x</span>
           </label>
-          <label class="inline" for="globalCadence"><strong>Training cadence</strong>
-            <input id="globalCadence" type="range" min="0" max="100" step="1" value="25" />
-            <span id="globalCadenceValue">25%</span>
+          <label class="inline" for="globalCadence"><strong>Matched cadence</strong>
+            <input id="globalCadence" type="range" min="0" max="20" step="1" value="4" />
+            <span id="globalCadenceValue">4 ticks/s</span>
           </label>
           <label class="inline"><input id="syncAutoTrain" type="checkbox" checked /> Sync auto-train</label>
           <label class="inline"><input id="syncVisualize" type="checkbox" checked /> Sync visualize delays</label>
@@ -325,6 +364,30 @@
           <a class="button-secondary" href="./index.html">Back to repo dashboard</a>
         </div>
       </div>
+    </section>
+
+    <section class="results-grid">
+      <article class="results-card">
+        <header>
+          <div>
+            <h3>Shared comparison results</h3>
+            <p class="muted">A single summary panel extracts the embedded apps’ live stats so you can compare progress without scanning both sidebars.</p>
+          </div>
+          <span class="chip" id="paceBadge">Pacing: waiting for data</span>
+        </header>
+        <div class="result-table" id="comparisonSummary"></div>
+      </article>
+
+      <article class="results-card">
+        <header>
+          <div>
+            <h3>Live side-by-side results</h3>
+            <p class="muted">These cards mirror the most important numbers from each app: progress count, active cadence, score-style metrics, and headline learning values.</p>
+          </div>
+          <span class="chip" id="syncBadge">Sync: waiting for frames</span>
+        </header>
+        <div class="result-table" id="appResults"></div>
+      </article>
     </section>
 
     <section class="compare-grid">
@@ -369,15 +432,15 @@
         <h2 class="section-title">Shared-control mapping</h2>
         <ul>
           <li><strong>Advance both once</strong> triggers Evolution’s <code>Train 1 generation</code> and RL’s <code>Next +1 ep</code>.</li>
-          <li><strong>Advance both in batches</strong> triggers Evolution’s <code>Train 20 generations</code> and RL’s <code>Next +10 ep</code>.</li>
+          <li><strong>Advance both in batches</strong> triggers Evolution’s <code>Next +10 gen</code> and RL’s <code>Next +10 ep</code> so the shared controls advance both apps more evenly.</li>
           <li><strong>Playback speed</strong> sets both embedded apps’ speed sliders to the same value.</li>
-          <li><strong>Training cadence</strong> scales Evolution’s generation rate and RL’s episode rate to comparable percentages of each app’s own max rate.</li>
+          <li><strong>Matched cadence</strong> now pushes the same numeric ticks-per-second value into both apps instead of scaling from different max-rate sliders.</li>
         </ul>
       </article>
     </section>
 
     <div class="footer">
-      <div>Version <span id="appVersion">1.0.0</span> · <span class="version-link" id="openVersions">View changelog</span></div>
+      <div>Version <span id="appVersion">1.1.0</span> · <span class="version-link" id="openVersions">View changelog</span></div>
       <div>This compare lab keeps the original apps unchanged and layers a synchronized shell around them.</div>
     </div>
   </main>
@@ -395,11 +458,21 @@
   <script>
     (() => {
       const APP_FILE = 'pong_compare.html';
-      const APP_VERSION = '1.0.0';
+      const APP_VERSION = '1.1.0';
       const HISTORY_FILE = 'pong_compare.versions.json';
       const EMBEDDED_HISTORY = {
-        latest: '1.0.0',
+        latest: '1.1.0',
         versions: [
+          {
+            version: '1.1.0',
+            label: 'Matched pacing + shared results summary',
+            appFile: 'pong_compare.html',
+            changes: [
+              'Reworked shared cadence controls so Evolution and RL now receive the same numeric training tick rate instead of percentages of different slider maxima.',
+              'Added a shared comparison results panel that extracts live metrics from both embedded apps and summarizes them side by side.',
+              'Adjusted the batch-advance mapping so the top-level controls move both apps forward more evenly.'
+            ]
+          },
           {
             version: '1.0.0',
             label: 'Initial side-by-side comparison lab',
@@ -423,6 +496,10 @@
       const globalCadenceValue = document.getElementById('globalCadenceValue');
       const syncAutoTrain = document.getElementById('syncAutoTrain');
       const syncVisualize = document.getElementById('syncVisualize');
+      const comparisonSummary = document.getElementById('comparisonSummary');
+      const appResults = document.getElementById('appResults');
+      const paceBadge = document.getElementById('paceBadge');
+      const syncBadge = document.getElementById('syncBadge');
       const appVersion = document.getElementById('appVersion');
 
       appVersion.textContent = APP_VERSION;
@@ -435,7 +512,7 @@
       const appConfigs = {
         evolution: {
           step: ['train1'],
-          burst: ['train20'],
+          burst: ['step10'],
           watch: ['watch'],
           stop: ['stopWatch'],
           reset: ['reset'],
@@ -443,7 +520,7 @@
           speedValue: 'speedValue',
           cadenceSlider: 'trainRate',
           cadenceValue: 'trainRateValue',
-          cadenceMax: 30,
+          cadenceMax: 20,
           autoTrain: 'autoTrain',
           visualize: 'visualizeTraining'
         },
@@ -457,7 +534,7 @@
           speedValue: 'speedValue',
           cadenceSlider: 'episodeRate',
           cadenceValue: 'episodeRateValue',
-          cadenceMax: 60,
+          cadenceMax: 20,
           autoTrain: 'autoTrain',
           visualize: 'visualizeTraining'
         }
@@ -539,16 +616,16 @@
       }
 
       function syncCadence() {
-        const pct = Number(globalCadence.value);
-        globalCadenceValue.textContent = `${pct}%`;
+        const cadence = Number(globalCadence.value);
+        globalCadenceValue.textContent = `${cadence} ticks/s`;
         [['evolution', appConfigs.evolution], ['rl', appConfigs.rl]].forEach(([key, config]) => {
           const doc = getFrameDoc(key);
           if (!doc) return;
-          const scaledValue = Math.round((pct / 100) * config.cadenceMax);
+          const appliedValue = Math.min(config.cadenceMax, cadence);
           const formatter = key === 'evolution'
             ? (v) => `${Number(v)} gen/s`
             : (v) => `${Number(v)} ep/s`;
-          setSlider(doc, config.cadenceSlider, scaledValue, config.cadenceValue, formatter);
+          setSlider(doc, config.cadenceSlider, appliedValue, config.cadenceValue, formatter);
         });
       }
 
@@ -575,8 +652,123 @@
         });
       }
 
+      function parseStatsText(text) {
+        const safeText = String(text || '');
+        const metric = (...patterns) => {
+          for (const pattern of patterns) {
+            const match = safeText.match(pattern);
+            if (match && typeof match[1] === 'string') return match[1].trim();
+          }
+          return 'n/a';
+        };
+        return {
+          progressLabel: metric(/^(?:Generation|Episode):\s*([^\n]+)/m),
+          progressType: metric(/^(Generation|Episode):/m),
+          playbackSpeed: metric(/Playback speed:\s*([^\n]+)/),
+          autoTrain: metric(/Auto-train while watching:\s*([^\n]+)/),
+          headlineA: metric(/- Fitness:\s*([^\n]+)/, /- Episode reward:\s*([^\n]+)/),
+          headlineB: metric(/- Population average fitness:\s*([^\n]+)/, /- Moving average reward:\s*([^\n]+)/),
+          pointsWon: metric(/- Points won:\s*([^\n]+)/),
+          pointsConceded: metric(/- Points conceded:\s*([^\n]+)/),
+          returns: metric(/- Returns:\s*([^\n]+)/),
+          score: metric(/- Score \(AI-player\):\s*([^\n]+)/),
+          epsilon: metric(/- Epsilon:\s*([^\n]+)/),
+          updates: metric(/- Total Q updates:\s*([^\n]+)/),
+          bestEver: metric(/Best fitness ever:\s*([^\n]+)/, /Best episode reward ever:\s*([^\n]+)/)
+        };
+      }
+
+      function readAppMetrics(key) {
+        const doc = getFrameDoc(key);
+        if (!doc) return null;
+        const statsEl = doc.getElementById('stats');
+        const parsed = parseStatsText(statsEl?.textContent || '');
+        return key === 'evolution'
+          ? {
+              title: 'Pong Evolution',
+              unit: 'generation',
+              progress: parsed.progressLabel,
+              playbackSpeed: parsed.playbackSpeed,
+              autoTrain: parsed.autoTrain,
+              headline1Label: 'Fitness',
+              headline1Value: parsed.headlineA,
+              headline2Label: 'Avg fitness',
+              headline2Value: parsed.headlineB,
+              scoreLabel: 'Points / conceded / returns',
+              scoreValue: `${parsed.pointsWon} / ${parsed.pointsConceded} / ${parsed.returns}`,
+              bestEver: parsed.bestEver
+            }
+          : {
+              title: 'Pong RL',
+              unit: 'episode',
+              progress: parsed.progressLabel,
+              playbackSpeed: parsed.playbackSpeed,
+              autoTrain: parsed.autoTrain,
+              headline1Label: 'Episode reward',
+              headline1Value: parsed.headlineA,
+              headline2Label: 'Moving avg reward',
+              headline2Value: parsed.headlineB,
+              scoreLabel: 'Score / epsilon / Q updates',
+              scoreValue: `${parsed.score} / ${parsed.epsilon} / ${parsed.updates}`,
+              bestEver: parsed.bestEver
+            };
+      }
+
+      function buildRow(label, evolutionValue, rlValue) {
+        return `
+          <div class="result-row">
+            <strong>${label}</strong>
+            <code>${evolutionValue}</code>
+            <code>${rlValue}</code>
+          </div>
+        `;
+      }
+
+      function renderComparisonPanels() {
+        const evolution = readAppMetrics('evolution');
+        const rl = readAppMetrics('rl');
+        if (!evolution || !rl) {
+          comparisonSummary.innerHTML = buildRow('Waiting for frames', 'loading…', 'loading…');
+          appResults.innerHTML = buildRow('App', 'Pong Evolution loading…', 'Pong RL loading…');
+          paceBadge.textContent = 'Pacing: waiting for data';
+          syncBadge.textContent = 'Sync: waiting for frames';
+          return;
+        }
+
+        const evoRate = evolution.autoTrain.split('@')[1]?.trim() || evolution.autoTrain;
+        const rlRate = rl.autoTrain.split('@')[1]?.trim() || rl.autoTrain;
+        const sameSpeed = evolution.playbackSpeed === rl.playbackSpeed;
+        const sameCadence = evoRate === rlRate;
+
+        comparisonSummary.innerHTML = [
+          buildRow('Metric', 'Pong Evolution', 'Pong RL'),
+          buildRow('Progress', `${evolution.progress} generations`, `${rl.progress} episodes`),
+          buildRow('Playback speed', evolution.playbackSpeed, rl.playbackSpeed),
+          buildRow('Auto-train cadence', evoRate, rlRate),
+          buildRow(evolution.headline1Label + ' vs ' + rl.headline1Label, evolution.headline1Value, rl.headline1Value),
+          buildRow(evolution.headline2Label + ' vs ' + rl.headline2Label, evolution.headline2Value, rl.headline2Value),
+          buildRow('Score-style metric', evolution.scoreValue, rl.scoreValue),
+          buildRow('Best-so-far', evolution.bestEver, rl.bestEver)
+        ].join('');
+
+        appResults.innerHTML = [
+          buildRow('App', evolution.title, rl.title),
+          buildRow('Current progress', evolution.progress, rl.progress),
+          buildRow('Current speed', evolution.playbackSpeed, rl.playbackSpeed),
+          buildRow('Current cadence', evolution.autoTrain, rl.autoTrain),
+          buildRow(evolution.headline1Label, evolution.headline1Value, rl.headline1Value),
+          buildRow(evolution.headline2Label, evolution.headline2Value, rl.headline2Value),
+          buildRow('Score / control context', evolution.scoreValue, rl.scoreValue),
+          buildRow('Best observed', evolution.bestEver, rl.bestEver)
+        ].join('');
+
+        paceBadge.textContent = sameCadence ? `Pacing: matched (${evoRate})` : `Pacing: drift (${evoRate} vs ${rlRate})`;
+        syncBadge.textContent = sameSpeed && sameCadence ? 'Sync: speed + cadence aligned' : 'Sync: check speed/cadence';
+      }
+
       bindFrame('evolution');
       bindFrame('rl');
+      window.setInterval(renderComparisonPanels, 350);
 
       document.getElementById('stepBoth').addEventListener('click', () => {
         runOnFrame('evolution', 'step');
