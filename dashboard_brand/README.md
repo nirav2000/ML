@@ -22,8 +22,8 @@ This folder packages the look and feel of the repository dashboard so it can be 
 - The generated SVG can be used in `index.html` or inside the app itself.
 
 ## Automation
-A ready-to-copy workflow example is included at `dashboard_brand/workflow_examples/generate-dashboard-previews.yml.example`.
-Move it into `.github/workflows/` in a repository that has workflow-enabled credentials, and it will regenerate preview SVGs whenever `index.html` or the preview manifest/script changes.
+The active GitHub Actions workflow now lives at `.github/workflows/generate-dashboard-previews.yml`, and the original example copy remains at `dashboard_brand/workflow_examples/generate-dashboard-previews.yml.example`.
+The workflow regenerates preview SVGs whenever `index.html` or the preview manifest/script changes.
 
 ## Notes
 - The generated preview art is intentionally theme-consistent rather than a literal browser screenshot.
