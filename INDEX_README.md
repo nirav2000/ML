@@ -51,3 +51,9 @@ The resource links section is still hand-authored. Update it when:
 3. Verify hero stats still make sense after rendering.
 4. Verify all linked files exist.
 5. Keep the dashboard polished and consistent with the existing visual language.
+
+
+## Next steps
+- Consider moving the hand-authored resource links into a data structure similar to `appCatalog` if you want them to stay fully in sync.
+- Add app-specific preview generators when a new app has a distinct visual identity instead of reusing an existing illustration.
+- If the markdown viewer becomes heavily used, consider upgrading it with fuller markdown support (tables, nested lists, fenced code languages).

@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Markdown Viewer</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #09111f;
+      --panel: rgba(16, 28, 48, 0.9);
+      --line: rgba(255,255,255,0.12);
+      --text: #edf4ff;
+      --muted: #aab8d0;
+      --accent: #7fb0ff;
+      --accent-2: #68e2c3;
+      --code: #0c172b;
+      --shadow: 0 28px 70px rgba(0,0,0,0.34);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(127,176,255,0.16), transparent 24%),
+        linear-gradient(180deg, #0a1426 0%, var(--bg) 100%);
+      color: var(--text);
+    }
+    .shell {
+      width: min(980px, calc(100% - 24px));
+      margin: 0 auto;
+      padding: 24px 0 56px;
+    }
+    .topbar, .doc {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+    }
+    .topbar {
+      padding: 18px 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+    .crumbs { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+    .badge {
+      display:inline-flex; align-items:center; gap:8px;
+      border-radius:999px; padding:8px 12px;
+      background: rgba(127,176,255,0.12); border:1px solid rgba(127,176,255,0.24);
+      color: var(--accent); font-weight: 700; font-size: 0.84rem;
+    }
+    .link-btn {
+      text-decoration:none; color: var(--text); font-weight:700;
+      border:1px solid var(--line); border-radius:999px; padding:10px 14px;
+      background: rgba(255,255,255,0.04);
+    }
+    .doc { padding: 30px 24px; }
+    .meta { color: var(--muted); margin-bottom: 18px; }
+    #content h1, #content h2, #content h3, #content h4 { line-height: 1.15; margin: 1.4em 0 0.55em; }
+    #content h1 { font-size: clamp(2rem, 5vw, 3rem); margin-top: 0.2em; }
+    #content h2 { font-size: 1.6rem; }
+    #content h3 { font-size: 1.25rem; }
+    #content p, #content li { color: var(--text); line-height: 1.75; }
+    #content ul, #content ol { padding-left: 1.5rem; }
+    #content pre {
+      background: var(--code); border:1px solid var(--line); border-radius: 16px;
+      padding: 16px; overflow:auto;
+    }
+    #content code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: rgba(255,255,255,0.06); padding: 0.15em 0.4em; border-radius: 8px;
+    }
+    #content pre code { background: transparent; padding: 0; }
+    #content blockquote {
+      margin: 1.2em 0; padding: 0.2em 1em; border-left: 4px solid var(--accent-2);
+      background: rgba(104,226,195,0.08); border-radius: 0 14px 14px 0; color: var(--muted);
+    }
+    #content a { color: var(--accent); }
+    #content hr { border: 0; border-top: 1px solid var(--line); margin: 28px 0; }
+    .error { color: #ffb7b7; }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="topbar">
+      <div class="crumbs">
+        <span class="badge">Markdown viewer</span>
+        <span class="meta" id="fileLabel">Loading…</span>
+      </div>
+      <div class="crumbs">
+        <a class="link-btn" href="./index.html">Back to dashboard</a>
+        <a class="link-btn" id="rawLink" href="#">Open raw file</a>
+      </div>
+    </div>
+    <article class="doc">
+      <div class="meta" id="status">Fetching markdown…</div>
+      <div id="content"></div>
+    </article>
+  </main>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const requestedFile = params.get('file') || 'README.md';
+    const safeFile = requestedFile.replace(/^\/+/, '').replace(/\.\.(\/|\\)/g, '');
+    const fileLabel = document.getElementById('fileLabel');
+    const status = document.getElementById('status');
+    const content = document.getElementById('content');
+    const rawLink = document.getElementById('rawLink');
+
+    fileLabel.textContent = safeFile;
+    rawLink.href = safeFile;
+
+    fetch(safeFile, { cache: 'no-store' })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.text();
+      })
+      .then((markdown) => {
+        status.textContent = `Rendering ${safeFile}`;
+        content.innerHTML = renderMarkdown(markdown, safeFile);
+        enhanceLinks(safeFile);
+      })
+      .catch((err) => {
+        status.innerHTML = `<span class="error">Unable to load markdown: ${escapeHtml(err.message)}</span>`;
+        content.innerHTML = '';
+      });
+
+    function renderMarkdown(markdown, currentFile) {
+      const normalized = markdown.replace(/\r\n?/g, '\n');
+      const lines = normalized.split('\n');
+      const html = [];
+      let inCode = false;
+      let codeLines = [];
+      let inUl = false;
+      let inOl = false;
+      let inBlockquote = false;
+      let paragraph = [];
+
+      const flushParagraph = () => {
+        if (!paragraph.length) return;
+        html.push(`<p>${renderInline(paragraph.join(' '), currentFile)}</p>`);
+        paragraph = [];
+      };
+      const closeLists = () => {
+        if (inUl) { html.push('</ul>'); inUl = false; }
+        if (inOl) { html.push('</ol>'); inOl = false; }
+      };
+      const closeQuote = () => {
+        if (inBlockquote) { flushParagraph(); html.push('</blockquote>'); inBlockquote = false; }
+      };
+
+      for (const line of lines) {
+        if (line.startsWith('```')) {
+          closeQuote();
+          flushParagraph();
+          closeLists();
+          if (!inCode) {
+            inCode = true;
+            codeLines = [];
+          } else {
+            html.push(`<pre><code>${escapeHtml(codeLines.join('\n'))}</code></pre>`);
+            inCode = false;
+          }
+          continue;
+        }
+        if (inCode) {
+          codeLines.push(line);
+          continue;
+        }
+
+        if (!line.trim()) {
+          flushParagraph();
+          closeLists();
+          closeQuote();
+          continue;
+        }
+
+        const heading = line.match(/^(#{1,4})\s+(.*)$/);
+        if (heading) {
+          closeQuote();
+          flushParagraph();
+          closeLists();
+          const level = heading[1].length;
+          html.push(`<h${level}>${renderInline(heading[2], currentFile)}</h${level}>`);
+          continue;
+        }
+
+        if (/^---+$/.test(line.trim()) || /^\*\*\*+$/.test(line.trim())) {
+          closeQuote();
+          flushParagraph();
+          closeLists();
+          html.push('<hr />');
+          continue;
+        }
+
+        const blockquote = line.match(/^>\s?(.*)$/);
+        if (blockquote) {
+          flushParagraph();
+          closeLists();
+          if (!inBlockquote) {
+            html.push('<blockquote>');
+            inBlockquote = true;
+          }
+          paragraph.push(blockquote[1]);
+          continue;
+        }
+
+        const ul = line.match(/^[-*]\s+(.*)$/);
+        if (ul) {
+          closeQuote();
+          flushParagraph();
+          if (inOl) { html.push('</ol>'); inOl = false; }
+          if (!inUl) { html.push('<ul>'); inUl = true; }
+          html.push(`<li>${renderInline(ul[1], currentFile)}</li>`);
+          continue;
+        }
+
+        const ol = line.match(/^\d+\.\s+(.*)$/);
+        if (ol) {
+          closeQuote();
+          flushParagraph();
+          if (inUl) { html.push('</ul>'); inUl = false; }
+          if (!inOl) { html.push('<ol>'); inOl = true; }
+          html.push(`<li>${renderInline(ol[1], currentFile)}</li>`);
+          continue;
+        }
+
+        paragraph.push(line.trim());
+      }
+
+      if (inCode) html.push(`<pre><code>${escapeHtml(codeLines.join('\n'))}</code></pre>`);
+      flushParagraph();
+      closeLists();
+      closeQuote();
+      return html.join('\n');
+    }
+
+    function renderInline(text, currentFile) {
+      let rendered = escapeHtml(text);
+      rendered = rendered.replace(/`([^`]+)`/g, (_, code) => `<code>${code}</code>`);
+      rendered = rendered.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, label, href) => {
+        const resolved = resolveRelativePath(currentFile, href.trim());
+        const target = isMarkdownFile(resolved)
+          ? `./markdown_viewer.html?file=${encodeURIComponent(resolved)}`
+          : resolved;
+        return `<a href="${escapeHtml(target)}">${escapeHtml(label)}</a>`;
+      });
+      rendered = rendered.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      rendered = rendered.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+      return rendered;
+    }
+
+    function enhanceLinks(currentFile) {
+      for (const anchor of content.querySelectorAll('a[href]')) {
+        const href = anchor.getAttribute('href');
+        if (!href || href.startsWith('http') || href.startsWith('#')) continue;
+        if (href.startsWith('./markdown_viewer.html?file=')) continue;
+        const resolved = resolveRelativePath(currentFile, href);
+        if (isMarkdownFile(resolved)) {
+          anchor.href = `./markdown_viewer.html?file=${encodeURIComponent(resolved)}`;
+        }
+      }
+    }
+
+    function resolveRelativePath(baseFile, relativePath) {
+      if (/^(https?:|mailto:|#)/.test(relativePath)) return relativePath;
+      const baseParts = baseFile.split('/');
+      baseParts.pop();
+      const combined = [...baseParts, ...relativePath.split('/')];
+      const resolved = [];
+      for (const part of combined) {
+        if (!part || part === '.') continue;
+        if (part === '..') resolved.pop();
+        else resolved.push(part);
+      }
+      return resolved.join('/');
+    }
+
+    function isMarkdownFile(path) {
+      return /\.md$/i.test(path);
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+  </script>
+</body>
+</html>
