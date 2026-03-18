@@ -440,7 +440,7 @@
     </section>
 
     <div class="footer">
-      <div>Version <span id="appVersion">1.4.0</span> · <span class="version-link" id="openVersions">View changelog</span></div>
+      <div>Version <span id="appVersion">1.5.0</span> · <span class="version-link" id="openVersions">View changelog</span></div>
       <div>This compare lab now opens both apps in a compact responsive embed mode and layers a synchronized shell around them.</div>
     </div>
   </main>
@@ -458,19 +458,19 @@
   <script>
     (() => {
       const APP_FILE = 'pong_compare.html';
-      const APP_VERSION = '1.4.0';
+      const APP_VERSION = '1.5.0';
       const HISTORY_FILE = 'pong_compare.versions.json';
       const EMBEDDED_HISTORY = {
-        latest: '1.4.0',
+        latest: '1.5.0',
         versions: [
           {
-            version: '1.4.0',
-            label: 'Aligned gameplay bands + lighter frame work',
+            version: '1.5.0',
+            label: 'Linked vertical scrolling',
             appFile: 'pong_compare.html',
             changes: [
-              'Automatically aligns the visible gameplay areas so both canvases start at the same vertical band in the side-by-side layout.',
-              'Keeps both apps in compact responsive embed mode while preserving the shared compare shell and results panel.',
-              'Pairs with lighter originating-app watch loops that now avoid rewriting large stats blocks on every animation frame.'
+              'Adds linked vertical scrolling so moving one embedded app view proportionally scrolls the other and keeps the comparison aligned.',
+              'Keeps the automatic gameplay-band alignment used when the frames load or the window resizes.',
+              'Builds on the lighter originating-app watch loops and compact embed mode from the earlier compare updates.'
             ]
           },
           {
@@ -518,6 +518,7 @@
         evolution: { loaded: false, iframe: frameEvolution, statusEl: statusEvolution },
         rl: { loaded: false, iframe: frameRl, statusEl: statusRl }
       };
+      let scrollSyncMuted = false;
 
       const appConfigs = {
         evolution: {
@@ -667,6 +668,33 @@
         });
       }
 
+      function syncScrollPosition(sourceKey) {
+        if (scrollSyncMuted) return;
+
+        const sourceWindow = frameState[sourceKey].iframe.contentWindow;
+        const targetKey = sourceKey === 'evolution' ? 'rl' : 'evolution';
+        const targetWindow = frameState[targetKey].iframe.contentWindow;
+        if (!sourceWindow || !targetWindow) return;
+
+        const sourceDoc = sourceWindow.document.documentElement;
+        const targetDoc = targetWindow.document.documentElement;
+        const sourceScrollable = Math.max(1, sourceDoc.scrollHeight - sourceWindow.innerHeight);
+        const targetScrollable = Math.max(0, targetDoc.scrollHeight - targetWindow.innerHeight);
+        const ratio = targetScrollable === 0 ? 0 : sourceWindow.scrollY / sourceScrollable;
+
+        scrollSyncMuted = true;
+        targetWindow.scrollTo({ top: ratio * targetScrollable, behavior: 'auto' });
+        window.setTimeout(() => { scrollSyncMuted = false; }, 0);
+      }
+
+      function bindLinkedScroll(key) {
+        const entry = frameState[key];
+        const win = entry.iframe.contentWindow;
+        if (!win || win.__compareScrollBound) return;
+        win.__compareScrollBound = true;
+        win.addEventListener('scroll', () => syncScrollPosition(key), { passive: true });
+      }
+
       function bindFrame(key) {
         const entry = frameState[key];
         updateStatus(key, `${key === 'evolution' ? 'Evolution' : 'RL'} frame: loading…`, 'loading');
@@ -678,8 +706,10 @@
             syncCadence();
             syncCheckboxes();
             alignEmbeddedGameAreas();
+            bindLinkedScroll(key);
           }, 120);
           window.setTimeout(alignEmbeddedGameAreas, 450);
+          window.setTimeout(() => syncScrollPosition(key), 180);
         });
       }
 

@@ -1,6 +1,16 @@
 {
-  "latest": "1.4.0",
+  "latest": "1.5.0",
   "versions": [
+    {
+      "version": "1.5.0",
+      "label": "Linked vertical scrolling",
+      "appFile": "pong_compare.html",
+      "changes": [
+        "Adds linked vertical scrolling so moving one embedded app view proportionally scrolls the other and keeps the comparison aligned.",
+        "Keeps the automatic gameplay-band alignment used when the frames load or the window resizes.",
+        "Builds on the lighter originating-app watch loops and compact embed mode from the earlier compare updates."
+      ]
+    },
     {
       "version": "1.4.0",
       "label": "Aligned gameplay bands + lighter frame work",
