@@ -11,6 +11,8 @@
     .right-pane { width: 360px; }
     canvas { border:1px solid #222; display:block; margin:10px 0; background:#fff; width:100%; max-width:640px; height:auto; }
     button { margin:4px 6px 4px 0; padding:8px 12px; }
+    .toggle-button { background:#e5e7eb; color:#111827; border:1px solid #cbd5e1; border-radius:999px; }
+    .toggle-button.active { background:#2563eb; color:#fff; border-color:#1d4ed8; }
     .controls { margin:8px 0 10px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
     #stats { white-space: pre-wrap; background:#f4f4f4; padding:10px; border-radius:8px; min-height:300px; }
     #log { white-space: pre-wrap; background:#111827; color:#e5e7eb; padding:10px; border-radius:8px; height:220px; overflow:auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; }
@@ -38,7 +40,7 @@
     <button id="trainEvo10">Train Evolution +10 gen</button>
     <button id="trainRl10">Train RL +10 ep</button>
     <button id="trainRl100">Train RL +100 ep</button>
-    <button id="trainBoth">Train both bundle</button>
+    <button id="toggleTrainBoth" class="toggle-button">Continuous train both: OFF</button>
   </div>
 
   <div class="controls">
@@ -75,7 +77,7 @@
   </div>
 
   <div class="footer">
-    Version <span id="appVersion">1.0.0</span> · <span class="version-link" id="openVersions">View changelog</span>
+    Version <span id="appVersion">1.1.0</span> · <span class="version-link" id="openVersions">View changelog</span>
   </div>
 
   <div class="modal" id="versionsModal" aria-hidden="true">
@@ -91,19 +93,19 @@
 <script>
 (() => {
   const APP_FILE = 'pong_duel.html';
-  const APP_VERSION = '1.0.0';
+  const APP_VERSION = '1.1.0';
   const HISTORY_FILE = 'pong_duel.versions.json';
   const EMBEDDED_HISTORY = {
-    latest: '1.0.0',
+    latest: '1.1.0',
     versions: [
       {
-        version: '1.0.0',
-        label: 'Initial head-to-head arena',
+        version: '1.1.0',
+        label: 'Continuous joint training toggle',
         appFile: 'pong_duel.html',
         changes: [
-          'Added a new arena app where the evolution agent and RL agent can train independently and then play each other directly.',
-          'Added duel evaluation, live watch mode, shared score summaries, and a duel margin chart.',
-          'Added initial version-history wiring and dashboard/README discoverability support.'
+          'Replaced the one-shot train-both bundle button with a true on/off continuous joint-training toggle.',
+          'Added active/inactive button styling so the toggle reads blue when running and gray when off.',
+          'Kept the head-to-head duel flow, chart, stats, and version-history support from the initial release.'
         ]
       }
     ]
@@ -148,6 +150,8 @@
 
   let playbackSpeed = 1;
   let animId = null;
+  let trainBothLoopId = null;
+  let trainBothActive = false;
   let flashTicks = 0;
   let duelMatches = 0;
   let evolutionWins = 0;
@@ -607,8 +611,42 @@
 `Evolution training:\n- Generation: ${evolutionGeneration}\n- Best fitness ever: ${bestFitnessEver === -Infinity ? 'n/a' : bestFitnessEver.toFixed(2)}\n- Best brain ready: ${bestEvolutionBrain ? 'yes' : 'baseline only'}\n\nRL training:\n- Episode: ${rlEpisode}\n- Best reward ever: ${rlBestRewardEver === -Infinity ? 'n/a' : rlBestRewardEver.toFixed(2)}\n- Epsilon: ${rlEpsilon.toFixed(3)}\n- Total Q updates: ${rlTotalUpdates}\n\nHead-to-head duel:\n- Matches completed: ${duelMatches}\n- Evolution wins: ${evolutionWins}\n- RL wins: ${rlWins}\n- Ties: ${ties}\n- ${lastDuelSummary}\n\nInterpretation:\n- Evolution learned as a population against a scripted practice paddle, then its best controller is mirrored onto the left side.\n- RL learned as a single right-side policy against its scripted practice paddle, then uses its learned Q-table directly in the duel.\n- This arena is not training both agents against each other live; it is evaluating how their separately trained policies perform head to head.\n\n${extra}`;
   }
 
+  function syncTrainBothToggleUi() {
+    const button = document.getElementById('toggleTrainBoth');
+    if (!button) return;
+    button.classList.toggle('active', trainBothActive);
+    button.textContent = `Continuous train both: ${trainBothActive ? 'ON' : 'OFF'}`;
+  }
+
+  function stopTrainBothLoop(reason = 'Stopped continuous joint training.') {
+    if (trainBothLoopId !== null) clearInterval(trainBothLoopId);
+    trainBothLoopId = null;
+    trainBothActive = false;
+    syncTrainBothToggleUi();
+    updateStats(reason);
+  }
+
+  function startTrainBothLoop() {
+    if (trainBothLoopId !== null) return;
+    trainBothActive = true;
+    syncTrainBothToggleUi();
+    trainBothLoopId = window.setInterval(() => {
+      evolveOneGeneration();
+      for (let i = 0; i < 5; i++) runRlPracticeEpisode();
+      updateStats('Continuous joint training is running.');
+    }, 500);
+    updateStats('Started continuous joint training.');
+    logEvent('Started continuous joint training.');
+  }
+
+  function toggleTrainBothLoop() {
+    if (trainBothActive) stopTrainBothLoop('Stopped continuous joint training.');
+    else startTrainBothLoop();
+  }
+
   function resetAll() {
     stopAnim();
+    stopTrainBothLoop('Reset all agents and duel history.');
     evolutionPopulation = makePopulation();
     evolutionGeneration = 0;
     bestFitnessEver = -Infinity;
@@ -687,11 +725,7 @@
   document.getElementById('trainEvo10').onclick = () => { for (let i = 0; i < 10; i++) evolveOneGeneration(); updateStats('Trained Evolution +10 generations.'); };
   document.getElementById('trainRl10').onclick = () => { for (let i = 0; i < 10; i++) runRlPracticeEpisode(); updateStats('Trained RL +10 episodes.'); };
   document.getElementById('trainRl100').onclick = () => { for (let i = 0; i < 100; i++) runRlPracticeEpisode(); updateStats('Trained RL +100 episodes.'); };
-  document.getElementById('trainBoth').onclick = () => {
-    for (let i = 0; i < 5; i++) evolveOneGeneration();
-    for (let i = 0; i < 50; i++) runRlPracticeEpisode();
-    updateStats('Ran a bundled training pass for both agents.');
-  };
+  document.getElementById('toggleTrainBoth').onclick = toggleTrainBothLoop;
   document.getElementById('evalDuel').onclick = () => evaluateDuelBatch(5);
   document.getElementById('watchDuel').onclick = watchDuel;
   document.getElementById('stopWatch').onclick = () => { stopAnim(); updateStats('Animation stopped.'); logEvent('Stopped duel watch mode.'); };
@@ -722,6 +756,7 @@
   });
 
   drawDuelChart();
+  syncTrainBothToggleUi();
   updateStats('Ready. Train each agent, then evaluate or watch the duel.');
   logEvent('Initialized Pong Duel Lab.');
 })();

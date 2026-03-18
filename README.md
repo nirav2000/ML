@@ -75,4 +75,4 @@ Because the compare lab reuses the original apps inside same-origin iframes, you
 
 `pong_duel.html` is a dedicated arena app where the best evolved controller and the learned RL policy can train separately against their usual scripted practice opponent and then play each other directly in one shared Pong match.
 
-It includes quick training controls for each side, duel evaluation batches, a live watch mode, and a simple duel-margin chart so you can track whether Evolution or RL is winning more often across repeated matches.
+It includes quick training controls for each side, a continuous joint-training toggle, duel evaluation batches, a live watch mode, and a simple duel-margin chart so you can track whether Evolution or RL is winning more often across repeated matches.

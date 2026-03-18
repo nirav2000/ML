@@ -1,6 +1,16 @@
 {
-  "latest": "1.0.0",
+  "latest": "1.1.0",
   "versions": [
+    {
+      "version": "1.1.0",
+      "label": "Continuous joint training toggle",
+      "appFile": "pong_duel.html",
+      "changes": [
+        "Replaced the one-shot train-both bundle button with a true on/off continuous joint-training toggle.",
+        "Added active/inactive button styling so the toggle reads blue when running and gray when off.",
+        "Kept the head-to-head duel flow, chart, stats, and version-history support from the initial release."
+      ]
+    },
     {
       "version": "1.0.0",
       "label": "Initial head-to-head arena",

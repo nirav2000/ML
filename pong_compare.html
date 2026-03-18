@@ -381,12 +381,12 @@
       <article class="results-card">
         <header>
           <div>
-            <h3>Live side-by-side results</h3>
-            <p class="muted">These cards mirror the most important numbers from each app: progress count, active cadence, score-style metrics, and headline learning values.</p>
+            <h3>Sync and inspection status</h3>
+            <p class="muted">This panel now focuses on alignment, sync health, and interpretation hints instead of repeating the same metrics already shown in the main comparison table.</p>
           </div>
           <span class="chip" id="syncBadge">Sync: waiting for frames</span>
         </header>
-        <div class="result-table" id="appResults"></div>
+        <div class="result-table" id="syncSummary"></div>
       </article>
     </section>
 
@@ -440,7 +440,7 @@
     </section>
 
     <div class="footer">
-      <div>Version <span id="appVersion">1.5.0</span> · <span class="version-link" id="openVersions">View changelog</span></div>
+      <div>Version <span id="appVersion">1.6.0</span> · <span class="version-link" id="openVersions">View changelog</span></div>
       <div>This compare lab now opens both apps in a compact responsive embed mode and layers a synchronized shell around them.</div>
     </div>
   </main>
@@ -458,19 +458,19 @@
   <script>
     (() => {
       const APP_FILE = 'pong_compare.html';
-      const APP_VERSION = '1.5.0';
+      const APP_VERSION = '1.6.0';
       const HISTORY_FILE = 'pong_compare.versions.json';
       const EMBEDDED_HISTORY = {
-        latest: '1.5.0',
+        latest: '1.6.0',
         versions: [
           {
-            version: '1.5.0',
-            label: 'Linked vertical scrolling',
+            version: '1.6.0',
+            label: 'De-duplicated compare summaries',
             appFile: 'pong_compare.html',
             changes: [
-              'Adds linked vertical scrolling so moving one embedded app view proportionally scrolls the other and keeps the comparison aligned.',
-              'Keeps the automatic gameplay-band alignment used when the frames load or the window resizes.',
-              'Builds on the lighter originating-app watch loops and compact embed mode from the earlier compare updates.'
+              'Replaced the duplicate second results table with a compact sync-and-health summary panel.',
+              'Kept the linked scrolling and gameplay-band alignment behavior for easier side-by-side inspection.',
+              'Preserved the main shared comparison table as the single detailed metrics view.'
             ]
           },
           {
@@ -507,7 +507,7 @@
       const syncAutoTrain = document.getElementById('syncAutoTrain');
       const syncVisualize = document.getElementById('syncVisualize');
       const comparisonSummary = document.getElementById('comparisonSummary');
-      const appResults = document.getElementById('appResults');
+      const syncSummary = document.getElementById('syncSummary');
       const paceBadge = document.getElementById('paceBadge');
       const syncBadge = document.getElementById('syncBadge');
       const appVersion = document.getElementById('appVersion');
@@ -790,7 +790,7 @@
         const rl = readAppMetrics('rl');
         if (!evolution || !rl) {
           comparisonSummary.innerHTML = buildRow('Waiting for frames', 'loading…', 'loading…');
-          appResults.innerHTML = buildRow('App', 'Pong Evolution loading…', 'Pong RL loading…');
+          syncSummary.innerHTML = buildRow('Frames', 'Pong Evolution loading…', 'Pong RL loading…');
           paceBadge.textContent = 'Pacing: waiting for data';
           syncBadge.textContent = 'Sync: waiting for frames';
           return;
@@ -812,15 +812,18 @@
           buildRow('Best-so-far', evolution.bestEver, rl.bestEver)
         ].join('');
 
-        appResults.innerHTML = [
-          buildRow('App', evolution.title, rl.title),
-          buildRow('Current progress', evolution.progress, rl.progress),
-          buildRow('Current speed', evolution.playbackSpeed, rl.playbackSpeed),
-          buildRow('Current cadence', evolution.autoTrain, rl.autoTrain),
-          buildRow(evolution.headline1Label, evolution.headline1Value, rl.headline1Value),
-          buildRow(evolution.headline2Label, evolution.headline2Value, rl.headline2Value),
-          buildRow('Score / control context', evolution.scoreValue, rl.scoreValue),
-          buildRow('Best observed', evolution.bestEver, rl.bestEver)
+        const framesReady = `${frameState.evolution.loaded ? 'ready' : 'loading'} / ${frameState.rl.loaded ? 'ready' : 'loading'}`;
+        const alignmentState = 'linked + auto-aligned';
+        const cadenceState = sameCadence ? `matched (${evoRate})` : `drift (${evoRate} vs ${rlRate})`;
+        const speedState = sameSpeed ? `matched (${evolution.playbackSpeed})` : `${evolution.playbackSpeed} vs ${rl.playbackSpeed}`;
+
+        syncSummary.innerHTML = [
+          buildRow('Frames ready', framesReady, 'Both embedded apps available'),
+          buildRow('Playback sync', speedState, sameSpeed ? 'Speed sliders aligned' : 'Adjust playback speed'),
+          buildRow('Cadence sync', cadenceState, sameCadence ? 'Cadence aligned' : 'Adjust matched cadence'),
+          buildRow('Layout sync', alignmentState, 'Gameplay bands stay aligned'),
+          buildRow('Scroll sync', 'Linked vertical scrolling', 'Both views move together'),
+          buildRow('How to read it', 'Use the left table for metrics', 'Use this panel for sync + inspection status')
         ].join('');
 
         paceBadge.textContent = sameCadence ? `Pacing: matched (${evoRate})` : `Pacing: drift (${evoRate} vs ${rlRate})`;

@@ -1,6 +1,16 @@
 {
-  "latest": "1.5.0",
+  "latest": "1.6.0",
   "versions": [
+    {
+      "version": "1.6.0",
+      "label": "De-duplicated compare summaries",
+      "appFile": "pong_compare.html",
+      "changes": [
+        "Replaced the duplicate second results table with a compact sync-and-health summary panel.",
+        "Kept the linked scrolling and gameplay-band alignment behavior for easier side-by-side inspection.",
+        "Preserved the main shared comparison table as the single detailed metrics view."
+      ]
+    },
     {
       "version": "1.5.0",
       "label": "Linked vertical scrolling",
