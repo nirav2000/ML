@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pong Duel Lab — Evolution vs RL</title>
+  <link rel="stylesheet" href="./dashboard_brand/theme.css" />
+  <link rel="stylesheet" href="./dashboard_brand/components.css" />
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.4; }
     .app-shell { display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap; }
@@ -41,6 +43,7 @@
     <button id="trainRl10">Train RL +10 ep</button>
     <button id="trainRl100">Train RL +100 ep</button>
     <button id="toggleTrainBoth" class="toggle-button">Continuous train both: OFF</button>
+    <button id="toggleTheme" class="toggle-button" aria-pressed="false">Brand theme: OFF</button>
   </div>
 
   <div class="controls">
@@ -77,7 +80,7 @@
   </div>
 
   <div class="footer">
-    Version <span id="appVersion">1.1.0</span> · <span class="version-link" id="openVersions">View changelog</span>
+    Version <span id="appVersion">1.2.0</span> · <span class="version-link" id="openVersions">View changelog</span>
   </div>
 
   <div class="modal" id="versionsModal" aria-hidden="true">
@@ -93,19 +96,19 @@
 <script>
 (() => {
   const APP_FILE = 'pong_duel.html';
-  const APP_VERSION = '1.1.0';
+  const APP_VERSION = '1.2.0';
   const HISTORY_FILE = 'pong_duel.versions.json';
   const EMBEDDED_HISTORY = {
-    latest: '1.1.0',
+    latest: '1.2.0',
     versions: [
       {
-        version: '1.1.0',
-        label: 'Continuous joint training toggle',
+        version: '1.2.0',
+        label: 'Optional brand theme + smoother training',
         appFile: 'pong_duel.html',
         changes: [
-          'Replaced the one-shot train-both bundle button with a true on/off continuous joint-training toggle.',
-          'Added active/inactive button styling so the toggle reads blue when running and gray when off.',
-          'Kept the head-to-head duel flow, chart, stats, and version-history support from the initial release.'
+          'Added a footer theme toggle so the app can opt into the shared dashboard brand look without forcing it on by default.',
+          'Updated the shared brand CSS so button clicks flash blue and toggle-style controls stay blue while active.',
+          'Reduced continuous-training overhead by allowing silent background training cycles for a smoother duel-lab experience.'
         ]
       }
     ]
@@ -152,6 +155,7 @@
   let animId = null;
   let trainBothLoopId = null;
   let trainBothActive = false;
+  let brandThemeActive = false;
   let flashTicks = 0;
   let duelMatches = 0;
   let evolutionWins = 0;
@@ -260,7 +264,7 @@
     return { fitness, returned, points, conceded };
   }
 
-  function evolveOneGeneration() {
+  function evolveOneGeneration({ silent = false } = {}) {
     let bestReturned = 0, bestPoints = 0, bestConceded = 0, avgFitness = 0;
     for (const member of evolutionPopulation) {
       let totalFitness = 0, totalReturned = 0, totalPoints = 0, totalConceded = 0;
@@ -294,7 +298,7 @@
       next.push({ brain: mutateBrain(parent), fitness: 0 });
     }
     evolutionPopulation = next;
-    logEvent(`Evolution gen ${evolutionGeneration}: best=${best.fitness.toFixed(2)} avg=${avgFitness.toFixed(2)} points=${bestPoints.toFixed(2)} conceded=${bestConceded.toFixed(2)} returns=${bestReturned.toFixed(2)}`);
+    if (!silent) logEvent(`Evolution gen ${evolutionGeneration}: best=${best.fitness.toFixed(2)} avg=${avgFitness.toFixed(2)} points=${bestPoints.toFixed(2)} conceded=${bestConceded.toFixed(2)} returns=${bestReturned.toFixed(2)}`);
   }
 
   // RL core.
@@ -352,7 +356,7 @@
     rlTotalUpdates++;
   }
 
-  function runRlPracticeEpisode() {
+  function runRlPracticeEpisode({ silent = false } = {}) {
     let playerY = H / 2 - PADDLE_H / 2;
     let aiY = H / 2 - PADDLE_H / 2;
     let ballX = W / 2;
@@ -399,7 +403,7 @@
       rlBestRewardEver = rewardValue;
       rlBestSnapshot = captureRlSnapshot();
     }
-    logEvent(`RL ep ${rlEpisode}: reward=${rewardValue.toFixed(2)} epsilon=${rlEpsilon.toFixed(3)} score ${aiScore}-${playerScore} updates=${rlTotalUpdates}`);
+    if (!silent) logEvent(`RL ep ${rlEpisode}: reward=${rewardValue.toFixed(2)} epsilon=${rlEpsilon.toFixed(3)} score ${aiScore}-${playerScore} updates=${rlTotalUpdates}`);
   }
 
   function getEvolutionMove(leftY, ballX, ballY, vx, vy) {
@@ -615,7 +619,17 @@
     const button = document.getElementById('toggleTrainBoth');
     if (!button) return;
     button.classList.toggle('active', trainBothActive);
+    button.setAttribute('aria-pressed', String(trainBothActive));
     button.textContent = `Continuous train both: ${trainBothActive ? 'ON' : 'OFF'}`;
+  }
+
+  function syncThemeToggleUi() {
+    const button = document.getElementById('toggleTheme');
+    if (!button) return;
+    button.classList.toggle('active', brandThemeActive);
+    button.setAttribute('aria-pressed', String(brandThemeActive));
+    button.textContent = `Brand theme: ${brandThemeActive ? 'ON' : 'OFF'}`;
+    document.body.classList.toggle('brand-app', brandThemeActive);
   }
 
   function stopTrainBothLoop(reason = 'Stopped continuous joint training.') {
@@ -631,8 +645,8 @@
     trainBothActive = true;
     syncTrainBothToggleUi();
     trainBothLoopId = window.setInterval(() => {
-      evolveOneGeneration();
-      for (let i = 0; i < 5; i++) runRlPracticeEpisode();
+      evolveOneGeneration({ silent: true });
+      for (let i = 0; i < 5; i++) runRlPracticeEpisode({ silent: true });
       updateStats('Continuous joint training is running.');
     }, 500);
     updateStats('Started continuous joint training.');
@@ -642,6 +656,12 @@
   function toggleTrainBothLoop() {
     if (trainBothActive) stopTrainBothLoop('Stopped continuous joint training.');
     else startTrainBothLoop();
+  }
+
+  function toggleBrandTheme() {
+    brandThemeActive = !brandThemeActive;
+    syncThemeToggleUi();
+    updateStats(brandThemeActive ? 'Applied brand theme.' : 'Removed brand theme.');
   }
 
   function resetAll() {
@@ -726,6 +746,7 @@
   document.getElementById('trainRl10').onclick = () => { for (let i = 0; i < 10; i++) runRlPracticeEpisode(); updateStats('Trained RL +10 episodes.'); };
   document.getElementById('trainRl100').onclick = () => { for (let i = 0; i < 100; i++) runRlPracticeEpisode(); updateStats('Trained RL +100 episodes.'); };
   document.getElementById('toggleTrainBoth').onclick = toggleTrainBothLoop;
+  document.getElementById('toggleTheme').onclick = toggleBrandTheme;
   document.getElementById('evalDuel').onclick = () => evaluateDuelBatch(5);
   document.getElementById('watchDuel').onclick = watchDuel;
   document.getElementById('stopWatch').onclick = () => { stopAnim(); updateStats('Animation stopped.'); logEvent('Stopped duel watch mode.'); };
@@ -757,6 +778,7 @@
 
   drawDuelChart();
   syncTrainBothToggleUi();
+  syncThemeToggleUi();
   updateStats('Ready. Train each agent, then evaluate or watch the duel.');
   logEvent('Initialized Pong Duel Lab.');
 })();
