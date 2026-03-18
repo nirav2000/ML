@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pong Compare Lab — Evolution vs RL</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #08111f;
+      --panel: rgba(10, 19, 34, 0.92);
+      --panel-soft: rgba(18, 31, 52, 0.92);
+      --line: rgba(255, 255, 255, 0.1);
+      --text: #eef4ff;
+      --muted: #a9b8d6;
+      --accent: #79a8ff;
+      --accent-2: #62e1c7;
+      --accent-3: #ffcf77;
+      --danger: #ff8e8e;
+      --shadow: 0 26px 80px rgba(0, 0, 0, 0.35);
+      --radius: 26px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(121,168,255,0.14), transparent 25%),
+        radial-gradient(circle at 85% 10%, rgba(98,225,199,0.14), transparent 20%),
+        linear-gradient(180deg, #0a1425 0%, var(--bg) 100%);
+    }
+
+    a { color: inherit; }
+
+    .shell {
+      width: min(1480px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 24px 0 40px;
+    }
+
+    .panel {
+      background: linear-gradient(180deg, rgba(16, 29, 51, 0.96), rgba(9, 17, 31, 0.96));
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+    }
+
+    .hero {
+      padding: 28px;
+      display: grid;
+      gap: 22px;
+      margin-bottom: 22px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      width: fit-content;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(121,168,255,0.12);
+      border: 1px solid rgba(121,168,255,0.24);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.5fr) minmax(280px, 0.8fr);
+      gap: 24px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2.2rem, 4.6vw, 4.5rem);
+      line-height: 0.96;
+      letter-spacing: -0.04em;
+      max-width: 10ch;
+    }
+
+    .lead {
+      color: var(--muted);
+      line-height: 1.75;
+      max-width: 68ch;
+      margin: 16px 0 0;
+    }
+
+    .chip-row, .control-row, .link-row, .status-grid, .mini-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .chip, .button, .button-secondary, .status-chip {
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.05);
+      color: var(--text);
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .chip, .status-chip { padding: 10px 14px; font-size: 0.94rem; }
+    .button, .button-secondary {
+      padding: 12px 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .button {
+      background: linear-gradient(135deg, var(--accent), #8d73ff);
+      color: #061120;
+      border-color: transparent;
+    }
+
+    .button-secondary { background: rgba(255,255,255,0.04); }
+
+    .button:hover, .button-secondary:hover, .chip:hover, .frame-card:hover { transform: translateY(-1px); }
+
+    .mini-card, .control-panel, .note-card, .frame-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+    }
+
+    .mini-card { padding: 18px; }
+    .mini-card strong {
+      display: block;
+      font-size: 1.8rem;
+      margin-bottom: 6px;
+    }
+    .mini-card span {
+      display: block;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .control-panel {
+      padding: 20px;
+      display: grid;
+      gap: 16px;
+      margin-bottom: 22px;
+    }
+
+    .control-group {
+      display: grid;
+      gap: 10px;
+    }
+
+    .control-group h2, .section-title {
+      margin: 0;
+      font-size: 1.08rem;
+    }
+
+    .muted { color: var(--muted); line-height: 1.7; margin: 0; }
+
+    label.inline {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--line);
+      width: fit-content;
+    }
+
+    input[type="range"] { width: min(260px, 70vw); }
+
+    .compare-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      margin-bottom: 22px;
+    }
+
+    .frame-card {
+      overflow: hidden;
+      transition: transform 0.18s ease, border-color 0.18s ease;
+    }
+
+    .frame-card header {
+      padding: 16px 18px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,0.03);
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .frame-card h3 { margin: 0 0 6px; }
+    .frame-card p { margin: 0; color: var(--muted); line-height: 1.6; }
+
+    .frame-wrap {
+      height: 1120px;
+      background: #ffffff;
+    }
+
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: #fff;
+    }
+
+    .note-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      margin-bottom: 22px;
+    }
+
+    .note-card { padding: 20px; }
+    .note-card ul { margin: 10px 0 0 18px; color: var(--muted); line-height: 1.7; }
+
+    .footer {
+      font-size: 0.92rem;
+      color: var(--muted);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 8px 2px 0;
+    }
+
+    .version-link { color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; place-items: center; padding: 20px; z-index: 50; }
+    .modal.show { display: grid; }
+    .modal-card { width: min(780px, 100%); max-height: 85vh; overflow: auto; border-radius: 22px; background: #fff; color: #09111f; padding: 18px; }
+    .modal-head { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom: 12px; }
+    .version-item { border:1px solid #d1d9e6; border-radius: 16px; padding: 14px; margin-bottom: 10px; }
+    .version-item.active { border-color:#4b7cff; box-shadow:0 0 0 3px rgba(75,124,255,0.12); }
+    .version-item h3 { margin: 0 0 6px; }
+    .version-item ul { margin: 8px 0 0 18px; color:#42516a; }
+
+    @media (max-width: 1120px) {
+      .hero-grid, .compare-grid, .note-grid { grid-template-columns: 1fr; }
+      .frame-wrap { height: 980px; }
+      h1 { max-width: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="panel hero">
+      <span class="eyebrow">Side-by-side compare lab</span>
+      <div class="hero-grid">
+        <div>
+          <h1>Pong Evolution vs Pong RL</h1>
+          <p class="lead">Open both Pong learning apps next to each other, use shared controls for common actions, and compare how a population-based search loop behaves differently from episode-by-episode reinforcement learning. This page keeps the original apps intact inside embedded panels so you can still use every native control and chart in each simulation.</p>
+          <div class="chip-row" style="margin-top:18px;">
+            <span class="chip">Evolution progresses by <strong>generations</strong></span>
+            <span class="chip">RL progresses by <strong>episodes</strong></span>
+            <span class="chip">Shared controls trigger both apps together</span>
+          </div>
+        </div>
+        <div class="mini-grid" style="display:grid; gap:14px;">
+          <div class="mini-card">
+            <strong>2</strong>
+            <span>Embedded apps running side by side on the same page for direct visual comparison.</span>
+          </div>
+          <div class="mini-card">
+            <strong>1</strong>
+            <span>Common control bar for synchronized watch, reset, speed, auto-train, and step actions.</span>
+          </div>
+          <div class="mini-card">
+            <strong>Live</strong>
+            <span>Frame status indicators help confirm when each app is loaded and ready for synchronized commands.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel control-panel">
+      <div class="control-group">
+        <h2>Shared controls</h2>
+        <p class="muted">These controls attempt to drive both embedded apps at once using their existing buttons and inputs. If one frame is still loading, the status chips below will show it.</p>
+        <div class="control-row">
+          <button class="button" id="stepBoth">Advance both once</button>
+          <button class="button-secondary" id="burstBoth">Advance both in batches</button>
+          <button class="button-secondary" id="watchBoth">Watch both</button>
+          <button class="button-secondary" id="stopBoth">Stop both</button>
+          <button class="button-secondary" id="resetBoth">Reset both</button>
+          <button class="button-secondary" id="reloadBoth">Reload both frames</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <h2>Synchronized training settings</h2>
+        <div class="control-row">
+          <label class="inline" for="globalSpeed"><strong>Playback speed</strong>
+            <input id="globalSpeed" type="range" min="0.25" max="8" step="0.25" value="1" />
+            <span id="globalSpeedValue">1.00x</span>
+          </label>
+          <label class="inline" for="globalCadence"><strong>Training cadence</strong>
+            <input id="globalCadence" type="range" min="0" max="100" step="1" value="25" />
+            <span id="globalCadenceValue">25%</span>
+          </label>
+          <label class="inline"><input id="syncAutoTrain" type="checkbox" checked /> Sync auto-train</label>
+          <label class="inline"><input id="syncVisualize" type="checkbox" checked /> Sync visualize delays</label>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <h2>Frame status</h2>
+        <div class="status-grid">
+          <span class="status-chip" id="statusEvolution">Evolution frame: loading…</span>
+          <span class="status-chip" id="statusRl">RL frame: loading…</span>
+        </div>
+        <div class="link-row">
+          <a class="button-secondary" href="./pong_evolution.html" target="_blank" rel="noreferrer">Open Pong Evolution standalone</a>
+          <a class="button-secondary" href="./pong_RL/pong_RL.html" target="_blank" rel="noreferrer">Open Pong RL standalone</a>
+          <a class="button-secondary" href="./index.html">Back to repo dashboard</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="compare-grid">
+      <article class="frame-card">
+        <header>
+          <div>
+            <h3>Pong Evolution</h3>
+            <p>Population-based neuroevolution with best/average fitness and generation-level metrics.</p>
+          </div>
+          <span class="chip">Generation loop</span>
+        </header>
+        <div class="frame-wrap">
+          <iframe id="frameEvolution" src="./pong_evolution.html" title="Pong Evolution app"></iframe>
+        </div>
+      </article>
+
+      <article class="frame-card">
+        <header>
+          <div>
+            <h3>Pong RL</h3>
+            <p>Episode-based tabular Q-learning with reward history, epsilon decay, and checkpoint status.</p>
+          </div>
+          <span class="chip">Episode loop</span>
+        </header>
+        <div class="frame-wrap">
+          <iframe id="frameRl" src="./pong_RL/pong_RL.html" title="Pong RL app"></iframe>
+        </div>
+      </article>
+    </section>
+
+    <section class="note-grid">
+      <article class="note-card">
+        <h2 class="section-title">What to compare while both are running</h2>
+        <ul>
+          <li>Whether progress looks smooth or noisy as generations and episodes accumulate.</li>
+          <li>How quickly each method produces a stable paddle policy under the same playback speed.</li>
+          <li>Which charts feel most intuitive for explaining learning to a new viewer: fitness trends or reward/value trends.</li>
+          <li>How often you want to use native app controls instead of synchronized commands while investigating a specific behavior.</li>
+        </ul>
+      </article>
+      <article class="note-card">
+        <h2 class="section-title">Shared-control mapping</h2>
+        <ul>
+          <li><strong>Advance both once</strong> triggers Evolution’s <code>Train 1 generation</code> and RL’s <code>Next +1 ep</code>.</li>
+          <li><strong>Advance both in batches</strong> triggers Evolution’s <code>Train 20 generations</code> and RL’s <code>Next +10 ep</code>.</li>
+          <li><strong>Playback speed</strong> sets both embedded apps’ speed sliders to the same value.</li>
+          <li><strong>Training cadence</strong> scales Evolution’s generation rate and RL’s episode rate to comparable percentages of each app’s own max rate.</li>
+        </ul>
+      </article>
+    </section>
+
+    <div class="footer">
+      <div>Version <span id="appVersion">1.0.0</span> · <span class="version-link" id="openVersions">View changelog</span></div>
+      <div>This compare lab keeps the original apps unchanged and layers a synchronized shell around them.</div>
+    </div>
+  </main>
+
+  <div class="modal" id="versionsModal" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head">
+        <strong>Pong Compare Lab Version History</strong>
+        <button id="closeVersions">Close</button>
+      </div>
+      <div id="versionsList"></div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const APP_FILE = 'pong_compare.html';
+      const APP_VERSION = '1.0.0';
+      const HISTORY_FILE = 'pong_compare.versions.json';
+      const EMBEDDED_HISTORY = {
+        latest: '1.0.0',
+        versions: [
+          {
+            version: '1.0.0',
+            label: 'Initial side-by-side comparison lab',
+            appFile: 'pong_compare.html',
+            changes: [
+              'Added a dedicated compare page that embeds Pong Evolution and Pong RL side by side.',
+              'Added synchronized controls for common watch, reset, step, speed, and training cadence actions.',
+              'Added compare notes, frame load status, and standalone launch links for both original apps.'
+            ]
+          }
+        ]
+      };
+
+      const frameEvolution = document.getElementById('frameEvolution');
+      const frameRl = document.getElementById('frameRl');
+      const statusEvolution = document.getElementById('statusEvolution');
+      const statusRl = document.getElementById('statusRl');
+      const globalSpeed = document.getElementById('globalSpeed');
+      const globalSpeedValue = document.getElementById('globalSpeedValue');
+      const globalCadence = document.getElementById('globalCadence');
+      const globalCadenceValue = document.getElementById('globalCadenceValue');
+      const syncAutoTrain = document.getElementById('syncAutoTrain');
+      const syncVisualize = document.getElementById('syncVisualize');
+      const appVersion = document.getElementById('appVersion');
+
+      appVersion.textContent = APP_VERSION;
+
+      const frameState = {
+        evolution: { loaded: false, iframe: frameEvolution, statusEl: statusEvolution },
+        rl: { loaded: false, iframe: frameRl, statusEl: statusRl }
+      };
+
+      const appConfigs = {
+        evolution: {
+          step: ['train1'],
+          burst: ['train20'],
+          watch: ['watch'],
+          stop: ['stopWatch'],
+          reset: ['reset'],
+          speedSlider: 'speedControl',
+          speedValue: 'speedValue',
+          cadenceSlider: 'trainRate',
+          cadenceValue: 'trainRateValue',
+          cadenceMax: 30,
+          autoTrain: 'autoTrain',
+          visualize: 'visualizeTraining'
+        },
+        rl: {
+          step: ['step1'],
+          burst: ['step10'],
+          watch: ['watch'],
+          stop: ['stopWatch', 'stopTrain'],
+          reset: ['reset'],
+          speedSlider: 'speedControl',
+          speedValue: 'speedValue',
+          cadenceSlider: 'episodeRate',
+          cadenceValue: 'episodeRateValue',
+          cadenceMax: 60,
+          autoTrain: 'autoTrain',
+          visualize: 'visualizeTraining'
+        }
+      };
+
+      function getFrameDoc(key) {
+        const entry = frameState[key];
+        if (!entry || !entry.loaded) return null;
+        try {
+          return entry.iframe.contentWindow?.document || null;
+        } catch (error) {
+          return null;
+        }
+      }
+
+      function updateStatus(key, message, tone) {
+        const el = frameState[key].statusEl;
+        const palette = {
+          loading: 'rgba(255,255,255,0.06)',
+          ready: 'rgba(98,225,199,0.12)',
+          warn: 'rgba(255,207,119,0.14)',
+          error: 'rgba(255,142,142,0.14)'
+        };
+        const border = {
+          loading: 'rgba(255,255,255,0.1)',
+          ready: 'rgba(98,225,199,0.36)',
+          warn: 'rgba(255,207,119,0.34)',
+          error: 'rgba(255,142,142,0.34)'
+        };
+        el.textContent = message;
+        el.style.background = palette[tone] || palette.loading;
+        el.style.borderColor = border[tone] || border.loading;
+      }
+
+      function clickIds(doc, ids) {
+        ids.forEach((id) => {
+          const el = doc.getElementById(id);
+          if (el) el.click();
+        });
+      }
+
+      function setSlider(doc, id, value, valueLabelId, formatter) {
+        const input = doc.getElementById(id);
+        if (!input) return;
+        input.value = String(value);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        const label = valueLabelId ? doc.getElementById(valueLabelId) : null;
+        if (label && formatter) label.textContent = formatter(value);
+      }
+
+      function setCheckbox(doc, id, checked) {
+        const input = doc.getElementById(id);
+        if (!input) return;
+        input.checked = checked;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+
+      function runOnFrame(key, actionName) {
+        const doc = getFrameDoc(key);
+        if (!doc) {
+          updateStatus(key, `${key === 'evolution' ? 'Evolution' : 'RL'} frame: still loading`, 'warn');
+          return false;
+        }
+        const config = appConfigs[key];
+        clickIds(doc, config[actionName] || []);
+        updateStatus(key, `${key === 'evolution' ? 'Evolution' : 'RL'} frame: action “${actionName}” sent`, 'ready');
+        return true;
+      }
+
+      function syncSpeed() {
+        const value = Number(globalSpeed.value);
+        globalSpeedValue.textContent = `${value.toFixed(2)}x`;
+        [['evolution', appConfigs.evolution], ['rl', appConfigs.rl]].forEach(([key, config]) => {
+          const doc = getFrameDoc(key);
+          if (!doc) return;
+          setSlider(doc, config.speedSlider, value, config.speedValue, (v) => `${Number(v).toFixed(2)}x`);
+        });
+      }
+
+      function syncCadence() {
+        const pct = Number(globalCadence.value);
+        globalCadenceValue.textContent = `${pct}%`;
+        [['evolution', appConfigs.evolution], ['rl', appConfigs.rl]].forEach(([key, config]) => {
+          const doc = getFrameDoc(key);
+          if (!doc) return;
+          const scaledValue = Math.round((pct / 100) * config.cadenceMax);
+          const formatter = key === 'evolution'
+            ? (v) => `${Number(v)} gen/s`
+            : (v) => `${Number(v)} ep/s`;
+          setSlider(doc, config.cadenceSlider, scaledValue, config.cadenceValue, formatter);
+        });
+      }
+
+      function syncCheckboxes() {
+        [['evolution', appConfigs.evolution], ['rl', appConfigs.rl]].forEach(([key, config]) => {
+          const doc = getFrameDoc(key);
+          if (!doc) return;
+          setCheckbox(doc, config.autoTrain, syncAutoTrain.checked);
+          setCheckbox(doc, config.visualize, syncVisualize.checked);
+        });
+      }
+
+      function bindFrame(key) {
+        const entry = frameState[key];
+        updateStatus(key, `${key === 'evolution' ? 'Evolution' : 'RL'} frame: loading…`, 'loading');
+        entry.iframe.addEventListener('load', () => {
+          entry.loaded = true;
+          updateStatus(key, `${key === 'evolution' ? 'Evolution' : 'RL'} frame: ready`, 'ready');
+          window.setTimeout(() => {
+            syncSpeed();
+            syncCadence();
+            syncCheckboxes();
+          }, 120);
+        });
+      }
+
+      bindFrame('evolution');
+      bindFrame('rl');
+
+      document.getElementById('stepBoth').addEventListener('click', () => {
+        runOnFrame('evolution', 'step');
+        runOnFrame('rl', 'step');
+      });
+      document.getElementById('burstBoth').addEventListener('click', () => {
+        runOnFrame('evolution', 'burst');
+        runOnFrame('rl', 'burst');
+      });
+      document.getElementById('watchBoth').addEventListener('click', () => {
+        runOnFrame('evolution', 'watch');
+        runOnFrame('rl', 'watch');
+      });
+      document.getElementById('stopBoth').addEventListener('click', () => {
+        runOnFrame('evolution', 'stop');
+        runOnFrame('rl', 'stop');
+      });
+      document.getElementById('resetBoth').addEventListener('click', () => {
+        runOnFrame('evolution', 'reset');
+        runOnFrame('rl', 'reset');
+      });
+      document.getElementById('reloadBoth').addEventListener('click', () => {
+        Object.entries(frameState).forEach(([key, entry]) => {
+          entry.loaded = false;
+          updateStatus(key, `${key === 'evolution' ? 'Evolution' : 'RL'} frame: reloading…`, 'loading');
+          entry.iframe.contentWindow?.location.reload();
+        });
+      });
+
+      globalSpeed.addEventListener('input', syncSpeed);
+      globalCadence.addEventListener('input', syncCadence);
+      syncAutoTrain.addEventListener('change', syncCheckboxes);
+      syncVisualize.addEventListener('change', syncCheckboxes);
+
+      function getRootPathPrefix() {
+        const p = window.location.pathname;
+        const appIdx = p.lastIndexOf(`/${APP_FILE}`);
+        if (appIdx !== -1) return p.slice(0, appIdx + 1);
+        const lastSlash = p.lastIndexOf('/');
+        return lastSlash === -1 ? '/' : p.slice(0, lastSlash + 1);
+      }
+      function getRootUrl() { return `${window.location.origin}${getRootPathPrefix()}`; }
+      function withBust(url) { return `${url}${url.includes('?') ? '&' : '?'}v=${Date.now()}`; }
+      function getCurrentAppFile() {
+        const prefix = getRootPathPrefix();
+        const path = window.location.pathname;
+        return path.startsWith(prefix) ? path.slice(prefix.length) : path.replace(/^\//, '');
+      }
+      function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, (char) => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#39;'
+        }[char] || char));
+      }
+      function renderVersionHistory(history) {
+        const container = document.getElementById('versionsList');
+        const current = getCurrentAppFile();
+        container.innerHTML = (history.versions || []).map((entry) => {
+          const active = entry.appFile === current ? ' active' : '';
+          return `
+            <div class="version-item${active}">
+              <h3>${escapeHtml(entry.version)} · ${escapeHtml(entry.label || '')}</h3>
+              <div><strong>File:</strong> <code>${escapeHtml(entry.appFile || '')}</code></div>
+              <ul>${(entry.changes || []).map((change) => `<li>${escapeHtml(change)}</li>`).join('')}</ul>
+            </div>
+          `;
+        }).join('');
+      }
+      async function loadVersionHistory() {
+        try {
+          const response = await fetch(withBust(`${getRootUrl()}${HISTORY_FILE}`), { cache: 'no-store' });
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          const history = await response.json();
+          renderVersionHistory(history);
+        } catch (error) {
+          renderVersionHistory(EMBEDDED_HISTORY);
+        }
+      }
+
+      const versionsModal = document.getElementById('versionsModal');
+      document.getElementById('openVersions').addEventListener('click', async () => {
+        await loadVersionHistory();
+        versionsModal.classList.add('show');
+        versionsModal.setAttribute('aria-hidden', 'false');
+      });
+      document.getElementById('closeVersions').addEventListener('click', () => {
+        versionsModal.classList.remove('show');
+        versionsModal.setAttribute('aria-hidden', 'true');
+      });
+      versionsModal.addEventListener('click', (event) => {
+        if (event.target === versionsModal) {
+          versionsModal.classList.remove('show');
+          versionsModal.setAttribute('aria-hidden', 'true');
+        }
+      });
+
+      syncSpeed();
+      syncCadence();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "latest": "1.0.0",
+  "versions": [
+    {
+      "version": "1.0.0",
+      "label": "Initial side-by-side comparison lab",
+      "appFile": "pong_compare.html",
+      "changes": [
+        "Added a dedicated compare page that embeds Pong Evolution and Pong RL side by side.",
+        "Added synchronized controls for common watch, reset, step, speed, and training cadence actions.",
+        "Added compare notes, frame load status, and standalone launch links for both original apps."
+      ]
+    }
+  ]
+}

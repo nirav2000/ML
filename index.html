@@ -459,7 +459,7 @@
     </section>
 
     <footer>
-      Built as a simple repo front door so visitors can discover the apps quickly and understand what they will learn before opening them.
+      Built as a simple repo front door so visitors can discover the apps quickly, compare related experiences, and understand what they will learn before opening them.
     </footer>
   </main>
 
@@ -526,6 +526,27 @@
           { label: "Launch Pong RL", href: "./pong_RL/pong_RL.html", primary: true },
           { label: "Changelog data", href: "./pong_RL/pong_RL.versions.json", primary: false },
           { label: "Archived versions", href: "./pong_RL/versions/", primary: false }
+        ]
+      },
+      {
+        name: "Pong Compare Lab",
+        version: "v1.0.0",
+        href: "./pong_compare.html",
+        artLabel: "Side-by-side preview",
+        image: createPongPreview(),
+        description:
+          "A comparison shell that embeds Pong Evolution and Pong RL side by side and adds synchronized controls for quick experiments.",
+        expect:
+          "You can expect both original Pong apps on one screen, shared playback/training controls, and a faster way to compare generations versus episodes.",
+        learn: [
+          "How the same Pong task looks when optimized with neuroevolution versus reinforcement learning.",
+          "How synchronized controls make training differences easier to observe in real time.",
+          "How an app-level comparison layer can reuse existing browser demos without rewriting them."
+        ],
+        links: [
+          { label: "Launch Compare Lab", href: "./pong_compare.html", primary: true },
+          { label: "Changelog data", href: "./pong_compare.versions.json", primary: false },
+          { label: "Open dashboard", href: "./index.html", primary: false }
         ]
       }
     ];

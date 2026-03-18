@@ -7,6 +7,7 @@ This repository contains interactive browser-based experiments focused on machin
 - `ML101.html` — interactive ML-focused playground.
 - `pong_evolution.html` — evolutionary Pong simulation.
 - `pong_RL/pong_RL.html` — reinforcement-learning Pong simulation.
+- `pong_compare.html` — side-by-side comparison lab for the evolution and RL Pong apps.
 
 ## Pong apps
 
@@ -40,6 +41,8 @@ That differs from neuroevolution because reinforcement learning usually trains o
 
 ### Runnable entry points
 - [Open Pong Evolution](./pong_evolution.html)
+- [Open Pong RL](./pong_RL/pong_RL.html)
+- [Open the new Pong Compare Lab](./pong_compare.html)
 - [Open the repo dashboard](./index.html)
 - [Open the reward/episode-based learning example currently in the repo (`ML101.html`)](./ML101.html)
 
@@ -56,3 +59,9 @@ As more apps are added, they can be listed on `index.html` with:
 - a short description,
 - learning outcomes,
 - and links to relevant docs or archived builds.
+
+## Pong compare lab
+
+`pong_compare.html` is a comparison shell that embeds both Pong apps side by side so you can inspect them in one browser view while still keeping each original app intact. It adds synchronized controls for common actions like stepping training forward, watching both policies, stopping animation, resetting both apps, and aligning playback speed / training cadence values.
+
+Because the compare lab reuses the original apps inside same-origin iframes, you can still use all native controls inside each panel when you want app-specific behavior, but the top-level page makes quick A/B comparisons much easier.
