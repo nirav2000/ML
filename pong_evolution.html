@@ -6,31 +6,21 @@
   <title>Pong Evolution — Plain JS</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.4; }
-    canvas { border: 1px solid #222; display:block; margin: 12px 0; }
+    .app-shell { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+    .left-pane { min-width: 680px; }
+    .right-pane { width: 360px; }
+    canvas { border: 1px solid #222; display:block; margin: 10px 0; background:#fff; }
     button { margin: 4px 6px 4px 0; padding: 8px 12px; }
-    #stats { white-space: pre-wrap; background: #f4f4f4; padding: 10px; border-radius: 8px; }
-
+    .controls { margin: 8px 0 10px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    #stats { white-space: pre-wrap; background: #f4f4f4; padding: 10px; border-radius: 8px; min-height: 240px; }
+    #log { white-space: pre-wrap; background:#111827; color:#e5e7eb; padding:10px; border-radius:8px; height:220px; overflow:auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+    .legend { background:#fafafa; border:1px solid #ddd; border-radius:8px; padding:10px; font-size:13px; margin-bottom:10px; }
+    .dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; vertical-align:middle; }
     .footer { margin-top: 10px; font-size: 12px; color: #555; }
     .version-link { color: #0366d6; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
-    .modal {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.55);
-      display: none;
-      place-items: center;
-      padding: 20px;
-      z-index: 100;
-    }
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; place-items: center; padding: 20px; z-index: 100; }
     .modal.show { display: grid; }
-    .modal-card {
-      width: min(760px, 100%);
-      max-height: 82vh;
-      overflow: auto;
-      background: #fff;
-      border: 1px solid #ddd;
-      border-radius: 12px;
-      padding: 12px;
-    }
+    .modal-card { width: min(760px, 100%); max-height: 82vh; overflow: auto; background: #fff; border: 1px solid #ddd; border-radius: 12px; padding: 12px; }
     .modal-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
     .version-item { border:1px solid #ddd; border-radius:10px; padding:10px; margin-bottom:8px; }
     .version-item.active { border-color:#0366d6; box-shadow:0 0 0 1px rgba(3,102,214,0.25); }
@@ -40,21 +30,55 @@
 </head>
 <body>
   <h1>Pong Evolution — Plain JS</h1>
-  <p>This version uses a very small neural net plus mutation/selection. It is closer to the “many bots get tested, keep the better ones, mutate, repeat” pattern.</p>
+  <p>Train the right (blue) paddle with neuroevolution while the left (red) opponent remains scripted and non-adaptive.</p>
 
-  <div>
+  <div class="controls">
     <button id="train1">Train 1 generation</button>
     <button id="train20">Train 20 generations</button>
+    <button id="step1">Next +1 gen</button>
+    <button id="step10">Next +10 gen</button>
     <button id="watch">Watch best bot</button>
+    <button id="stopWatch">Stop animation</button>
     <button id="reset">Reset population</button>
   </div>
 
-  <canvas id="game" width="640" height="400"></canvas>
-  <div id="stats"></div>
+  <div class="controls">
+    <label for="speedControl"><strong>Playback speed</strong></label>
+    <input id="speedControl" type="range" min="0.25" max="8" step="0.25" value="1" />
+    <span id="speedValue">1.00x</span>
 
+    <label><input id="visualizeTraining" type="checkbox" checked /> Visualize training delays</label>
+    <label><input id="autoTrain" type="checkbox" checked /> Auto-train while watching</label>
+
+    <label for="trainRate"><strong>Train rate</strong></label>
+    <input id="trainRate" type="range" min="0" max="30" step="1" value="4" />
+    <span id="trainRateValue">4 gen/s</span>
+  </div>
+
+  <div class="app-shell">
+    <div class="left-pane">
+      <canvas id="game" width="640" height="400"></canvas>
+      <canvas id="fitnessChart" width="640" height="170"></canvas>
+      <canvas id="metricsChart" width="640" height="170"></canvas>
+    </div>
+
+    <div class="right-pane">
+      <div class="legend">
+        <div><span class="dot" style="background:#ef4444"></span>Red paddle: scripted opponent (fixed rule, no learning).</div>
+        <div><span class="dot" style="background:#2563eb"></span>Blue paddle: learning AI (neural net evolved by generation).</div>
+        <div><span class="dot" style="background:#0366d6"></span>Fitness chart blue: best fitness in generation.</div>
+        <div><span class="dot" style="background:#d97706"></span>Fitness chart orange: average population fitness.</div>
+        <div><span class="dot" style="background:#16a34a"></span>Metrics chart green: AI points won.</div>
+        <div><span class="dot" style="background:#b91c1c"></span>Metrics chart red: points conceded.</div>
+      </div>
+      <div id="stats"></div>
+      <h3 style="margin:10px 0 6px;">Learning / generation log</h3>
+      <div id="log"></div>
+    </div>
+  </div>
 
   <div class="footer">
-    Version <span id="appVersion">1.2.0</span> · <span class="version-link" id="openVersions">View changelog</span>
+    Version <span id="appVersion">1.4.0</span> · <span class="version-link" id="openVersions">View changelog</span>
   </div>
 
   <div class="modal" id="versionsModal" aria-hidden="true">
@@ -70,49 +94,153 @@
 <script>
 (() => {
   const APP_FILE = "pong_evolution.html";
-  const APP_VERSION = "1.2.0";
+  const APP_VERSION = "1.4.0";
+  const EMBEDDED_HISTORY = {
+    latest: "1.4.0",
+    versions: [
+      {
+        version: "1.4.0",
+        label: "HiDPI charts + axis + live evolution controls",
+        appFile: "pong_evolution.html",
+        changes: [
+          "Added high-DPI chart rendering and generation axis labels.",
+          "Added continuous watch with optional auto-train and step-generation controls.",
+          "Moved stats panel to right pane and moved legend outside gameplay canvas."
+        ]
+      },
+      {
+        version: "1.3.1",
+        label: "Clearer training metrics + manual stop + color cues",
+        appFile: "versions/1.3.1/pong_evolution.html",
+        changes: [
+          "Improved training chart to plot both best and average fitness per generation.",
+          "Added explicit Stop animation button and stronger stop conditions for watch mode.",
+          "Color-coded scripted opponent vs AI paddle and clarified score labels/definitions."
+        ]
+      },
+      {
+        version: "1.3.0",
+        label: "Training chart + playback speed controls",
+        appFile: "versions/1.3.0/pong_evolution.html",
+        changes: [
+          "Added live training chart to visualize best fitness over generations.",
+          "Added speed slider affecting training pacing and watch playback speed.",
+          "Archived v1.2.2 under versions/1.2.2/pong_evolution.html."
+        ]
+      },
+      {
+        version: "1.2.2",
+        label: "UI startup hardening + safer changelog rendering",
+        appFile: "versions/1.2.2/pong_evolution.html",
+        changes: [
+          "Added global error hooks to surface startup/runtime failures in-page.",
+          "Refactored changelog rendering into a shared helper and guarded modal element wiring.",
+          "Archived v1.2.1 under versions/1.2.1/pong_evolution.html."
+        ]
+      },
+      {
+        version: "1.2.1",
+        label: "Startup reliability + history fallback",
+        appFile: "versions/1.2.1/pong_evolution.html",
+        changes: [
+          "Added defensive startup checks so runtime errors are surfaced in-page.",
+          "Added changelog fallback data so version history still works when JSON fetch fails.",
+          "Archived the previous current build as versions/1.2.0/pong_evolution.html."
+        ]
+      },
+      {
+        version: "1.2.0",
+        label: "Fixed GitHub Pages base-path version loading",
+        appFile: "versions/1.2.0/pong_evolution.html",
+        changes: [
+          "Fixed root URL detection so changelog/version switching works on project pages (e.g. /ML/...).",
+          "Ensured current-file detection resolves correctly when loaded from root or /versions/... paths.",
+          "Archived the previous current build as versions/1.1.0/pong_evolution.html."
+        ]
+      },
+      {
+        version: "1.1.0",
+        label: "Version archive support + changelog modal",
+        appFile: "versions/1.1.0/pong_evolution.html",
+        changes: [
+          "Added version footer + changelog modal.",
+          "Added root-aware version switching for current and archived paths.",
+          "Fetches pong_evolution.versions.json with cache-busting to avoid stale history."
+        ]
+      },
+      {
+        version: "1.0.0",
+        label: "Initial Pong Evolution release",
+        appFile: "versions/1.0.0/pong_evolution.html",
+        changes: [
+          "Initial plain JavaScript Pong Evolution implementation.",
+          "Neuroevolution loop with mutation, selection, and best-bot watch mode."
+        ]
+      }
+    ]
+  };
 
   function getRootPathPrefix() {
     const p = window.location.pathname;
     const versionIdx = p.indexOf('/versions/');
     if (versionIdx !== -1) return p.slice(0, versionIdx + 1);
-
     const appIdx = p.lastIndexOf(`/${APP_FILE}`);
     if (appIdx !== -1) return p.slice(0, appIdx + 1);
-
     const lastSlash = p.lastIndexOf('/');
     return lastSlash === -1 ? '/' : p.slice(0, lastSlash + 1);
   }
-
-  function getRootUrl() {
-    const prefix = getRootPathPrefix();
-    return `${window.location.origin}${prefix}`;
-  }
-
-  function withBust(url) {
-    const sep = url.includes('?') ? '&' : '?';
-    return `${url}${sep}v=${Date.now()}`;
-  }
-
+  function getRootUrl() { return `${window.location.origin}${getRootPathPrefix()}`; }
+  function withBust(url) { return `${url}${url.includes('?') ? '&' : '?'}v=${Date.now()}`; }
   function getCurrentAppFile() {
     const prefix = getRootPathPrefix();
     const path = window.location.pathname;
     const rel = path.startsWith(prefix) ? path.slice(prefix.length) : path.replace(/^\//, '');
-    if (rel.startsWith('versions/')) return rel;
-    return APP_FILE;
+    return rel.startsWith('versions/') ? rel : APP_FILE;
   }
 
   const canvas = document.getElementById("game");
-  const ctx = canvas.getContext("2d");
   const stats = document.getElementById("stats");
+  const logBox = document.getElementById("log");
+  const fitnessChart = document.getElementById("fitnessChart");
+  const metricsChart = document.getElementById("metricsChart");
 
-  const W = canvas.width;
-  const H = canvas.height;
+  const speedControl = document.getElementById("speedControl");
+  const speedValue = document.getElementById("speedValue");
+  const visualizeTraining = document.getElementById("visualizeTraining");
+  const autoTrain = document.getElementById("autoTrain");
+  const trainRate = document.getElementById("trainRate");
+  const trainRateValue = document.getElementById("trainRateValue");
+
+  function setupHiDPICanvas(el) {
+    const cssW = Number(el.getAttribute('width'));
+    const cssH = Number(el.getAttribute('height'));
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    el.style.width = `${cssW}px`;
+    el.style.height = `${cssH}px`;
+    el.width = Math.floor(cssW * dpr);
+    el.height = Math.floor(cssH * dpr);
+    const ctx = el.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { ctx, width: cssW, height: cssH };
+  }
+
+  const game = setupHiDPICanvas(canvas);
+  const fitness = setupHiDPICanvas(fitnessChart);
+  const metrics = setupHiDPICanvas(metricsChart);
+  const ctx = game.ctx;
+
+  if (!canvas || !stats || !logBox || !fitnessChart || !metricsChart) {
+    throw new Error("Required DOM nodes missing");
+  }
+
+  const W = game.width;
+  const H = game.height;
   const PADDLE_H = 80;
   const PADDLE_W = 12;
   const BALL = 10;
   const PLAYER_X = 20;
   const AI_X = W - 20 - PADDLE_W;
+
   const POP = 60;
   const ELITE = 8;
   const MUTATION = 0.18;
@@ -122,18 +250,26 @@
   let bestFitnessEver = -Infinity;
   let bestEver = null;
   let animId = null;
+  let isTraining = false;
+  let isWatching = false;
+  let speedMultiplier = 1;
+  let trainRatePerSec = 4;
+  let flashTicks = 0;
 
-  function clamp(v, lo, hi) {
-    return Math.max(lo, Math.min(hi, v));
+  const trainingHistory = []; // {gen, best, avg, points, conceded, returns}
+
+  function logEvent(message) {
+    const ts = new Date().toLocaleTimeString();
+    const line = `[${ts}] ${message}`;
+    logBox.textContent = `${line}\n${logBox.textContent}`.split('\n').slice(0, 120).join('\n');
   }
 
-  function randn() {
-    return (Math.random() * 2 - 1) + (Math.random() * 2 - 1);
-  }
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+  function randn() { return (Math.random() * 2 - 1) + (Math.random() * 2 - 1); }
+  function tanh(x) { return Math.tanh(x); }
 
   function makeBrain() {
     return {
-      // 5 inputs -> 6 hidden -> 1 output
       w1: Array.from({ length: 6 }, () => Array.from({ length: 5 }, () => randn() * 0.6)),
       b1: Array.from({ length: 6 }, () => randn() * 0.3),
       w2: Array.from({ length: 1 }, () => Array.from({ length: 6 }, () => randn() * 0.6)),
@@ -143,9 +279,9 @@
 
   function cloneBrain(brain) {
     return {
-      w1: brain.w1.map(row => row.slice()),
+      w1: brain.w1.map((row) => row.slice()),
       b1: brain.b1.slice(),
-      w2: brain.w2.map(row => row.slice()),
+      w2: brain.w2.map((row) => row.slice()),
       b2: brain.b2.slice()
     };
   }
@@ -159,202 +295,28 @@
     return out;
   }
 
-  function tanh(x) {
-    return Math.tanh(x);
-  }
-
   function forward(brain, input) {
     const hidden = brain.w1.map((row, i) => tanh(row.reduce((s, w, j) => s + w * input[j], brain.b1[i])));
-    const out = tanh(brain.w2[0].reduce((s, w, j) => s + w * hidden[j], brain.b2[0]));
-    return out;
+    return tanh(brain.w2[0].reduce((s, w, j) => s + w * hidden[j], brain.b2[0]));
   }
 
   function makePopulation() {
     return Array.from({ length: POP }, () => ({ brain: makeBrain(), fitness: 0 }));
   }
-
   let population = makePopulation();
 
-  function simulateMatch(brain, render = false) {
+  function simulateMatch(brain, render = false, maxFrames = 1800) {
     let playerY = H / 2 - PADDLE_H / 2;
     let aiY = H / 2 - PADDLE_H / 2;
     let ballX = W / 2;
     let ballY = H / 2;
     let vx = (Math.random() < 0.5 ? -1 : 1) * (4 + Math.random() * 2);
     let vy = (Math.random() * 2 - 1) * 3;
-    let fitness = 0;
+    let fitnessScore = 0;
     let frames = 0;
-    let returned = 0;
-    let scored = 0;
-    let conceded = 0;
+    let returned = 0, points = 0, conceded = 0;
 
-    while (frames < 1800) {
-      // scripted left paddle: follows imperfectly
-      const targetPlayer = ballY - PADDLE_H / 2;
-      const diffP = targetPlayer - playerY;
-      playerY += clamp(diffP, -4.4, 4.4);
-      playerY = clamp(playerY, 0, H - PADDLE_H);
-
-      // AI right paddle
-      const input = [
-        ballX / W,
-        ballY / H,
-        vx / 6,
-        vy / 6,
-        aiY / (H - PADDLE_H)
-      ];
-      const out = forward(brain, input);
-      aiY += out * 5.2;
-      aiY = clamp(aiY, 0, H - PADDLE_H);
-
-      ballX += vx;
-      ballY += vy;
-
-      if (ballY <= 0 || ballY >= H - BALL) {
-        vy *= -1;
-        ballY = clamp(ballY, 0, H - BALL);
-      }
-
-      // left paddle
-      if (ballX <= PLAYER_X + PADDLE_W &&
-          ballY + BALL >= playerY &&
-          ballY <= playerY + PADDLE_H &&
-          vx < 0) {
-        ballX = PLAYER_X + PADDLE_W;
-        vx *= -1;
-        const offset = (ballY + BALL / 2) - (playerY + PADDLE_H / 2);
-        vy += offset * 0.05;
-      }
-
-      // right paddle
-      if (ballX + BALL >= AI_X &&
-          ballY + BALL >= aiY &&
-          ballY <= aiY + PADDLE_H &&
-          vx > 0) {
-        ballX = AI_X - BALL;
-        vx *= -1;
-        const offset = (ballY + BALL / 2) - (aiY + PADDLE_H / 2);
-        vy += offset * 0.05;
-        fitness += 4;
-        returned += 1;
-      }
-
-      // scoring
-      if (ballX < 0) {
-        // AI scored
-        fitness += 25;
-        scored += 1;
-        ballX = W / 2; ballY = H / 2;
-        vx = 4 + Math.random() * 2;
-        vy = (Math.random() * 2 - 1) * 3;
-      } else if (ballX > W) {
-        // AI conceded
-        fitness -= 35;
-        conceded += 1;
-        ballX = W / 2; ballY = H / 2;
-        vx = -(4 + Math.random() * 2);
-        vy = (Math.random() * 2 - 1) * 3;
-      }
-
-      // small shaping reward: be near the ball vertically
-      const centerAi = aiY + PADDLE_H / 2;
-      const centerBall = ballY + BALL / 2;
-      fitness += 0.03 * (1 - Math.min(1, Math.abs(centerAi - centerBall) / (H / 2)));
-
-      if (render) {
-        drawScene(playerY, aiY, ballX, ballY, generation, fitness, returned, scored, conceded);
-      }
-
-      frames++;
-    }
-
-    return { fitness, returned, scored, conceded };
-  }
-
-  function evaluatePopulation() {
-    for (const member of population) {
-      let total = 0;
-      for (let i = 0; i < MATCHES_PER_BOT; i++) total += simulateMatch(member.brain, false).fitness;
-      member.fitness = total / MATCHES_PER_BOT;
-    }
-    population.sort((a, b) => b.fitness - a.fitness);
-
-    if (population[0].fitness > bestFitnessEver) {
-      bestFitnessEver = population[0].fitness;
-      bestEver = cloneBrain(population[0].brain);
-    }
-  }
-
-  function nextGeneration() {
-    evaluatePopulation();
-    const elites = population.slice(0, ELITE).map(m => ({ brain: cloneBrain(m.brain), fitness: 0 }));
-    const next = elites.slice();
-
-    while (next.length < POP) {
-      const parent = elites[Math.floor(Math.random() * elites.length)];
-      next.push({ brain: mutateBrain(parent.brain), fitness: 0 });
-    }
-
-    population = next;
-    generation++;
-  }
-
-  function trainMany(gens) {
-    for (let i = 0; i < gens; i++) nextGeneration();
-    updateStats(`Trained ${gens} generation(s).`);
-  }
-
-  function updateStats(extra = "") {
-    const bestCurrent = population[0] ? population[0].fitness : 0;
-    stats.textContent =
-`Generation: ${generation}
-Population: ${POP}
-Elite kept each generation: ${ELITE}
-Best fitness this generation: ${bestCurrent.toFixed(2)}
-Best fitness ever: ${bestFitnessEver.toFixed(2)}
-
-Interpretation:
-- higher fitness means the bot returned more balls, stayed closer to the ball, scored more, and conceded less.
-
-${extra}`;
-  }
-
-  function drawScene(playerY, aiY, ballX, ballY, gen, fit, returned, scored, conceded) {
-    ctx.clearRect(0, 0, W, H);
-    ctx.fillRect(PLAYER_X, playerY, PADDLE_W, PADDLE_H);
-    ctx.fillRect(AI_X, aiY, PADDLE_W, PADDLE_H);
-    ctx.fillRect(ballX, ballY, BALL, BALL);
-
-    ctx.setLineDash([6, 6]);
-    ctx.beginPath();
-    ctx.moveTo(W / 2, 0);
-    ctx.lineTo(W / 2, H);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    ctx.fillText(`Gen ${gen}`, 10, 14);
-    ctx.fillText(`Fitness ${fit.toFixed(1)}`, 10, 30);
-    ctx.fillText(`Returns ${returned}  AI score ${scored}  Conceded ${conceded}`, 10, 46);
-  }
-
-  function stopAnim() {
-    if (animId !== null) cancelAnimationFrame(animId);
-    animId = null;
-  }
-
-  function watchBest() {
-    stopAnim();
-    const brain = bestEver ? cloneBrain(bestEver) : cloneBrain(population[0].brain);
-
-    let playerY = H / 2 - PADDLE_H / 2;
-    let aiY = H / 2 - PADDLE_H / 2;
-    let ballX = W / 2;
-    let ballY = H / 2;
-    let vx = -(4 + Math.random() * 2);
-    let vy = (Math.random() * 2 - 1) * 3;
-    let returned = 0, scored = 0, conceded = 0, fitness = 0, frames = 0;
-
-    function loop() {
+    while (frames < maxFrames) {
       const targetPlayer = ballY - PADDLE_H / 2;
       playerY += clamp(targetPlayer - playerY, -4.4, 4.4);
       playerY = clamp(playerY, 0, H - PADDLE_H);
@@ -372,90 +334,369 @@ ${extra}`;
         ballY = clamp(ballY, 0, H - BALL);
       }
 
-      if (ballX <= PLAYER_X + PADDLE_W &&
-          ballY + BALL >= playerY &&
-          ballY <= playerY + PADDLE_H &&
-          vx < 0) {
+      if (ballX <= PLAYER_X + PADDLE_W && ballY + BALL >= playerY && ballY <= playerY + PADDLE_H && vx < 0) {
         ballX = PLAYER_X + PADDLE_W;
         vx *= -1;
         const offset = (ballY + BALL / 2) - (playerY + PADDLE_H / 2);
         vy += offset * 0.05;
       }
 
-      if (ballX + BALL >= AI_X &&
-          ballY + BALL >= aiY &&
-          ballY <= aiY + PADDLE_H &&
-          vx > 0) {
+      if (ballX + BALL >= AI_X && ballY + BALL >= aiY && ballY <= aiY + PADDLE_H && vx > 0) {
         ballX = AI_X - BALL;
         vx *= -1;
         const offset = (ballY + BALL / 2) - (aiY + PADDLE_H / 2);
         vy += offset * 0.05;
-        fitness += 4;
+        fitnessScore += 4;
         returned++;
       }
 
       if (ballX < 0) {
-        fitness += 25;
-        scored++;
+        fitnessScore += 25;
+        points++;
         ballX = W / 2; ballY = H / 2;
         vx = 4 + Math.random() * 2;
         vy = (Math.random() * 2 - 1) * 3;
       } else if (ballX > W) {
-        fitness -= 35;
+        fitnessScore -= 35;
         conceded++;
         ballX = W / 2; ballY = H / 2;
         vx = -(4 + Math.random() * 2);
         vy = (Math.random() * 2 - 1) * 3;
       }
 
-      fitness += 0.03 * (1 - Math.min(1, Math.abs((aiY + PADDLE_H / 2) - (ballY + BALL / 2)) / (H / 2)));
-      drawScene(playerY, aiY, ballX, ballY, generation, fitness, returned, scored, conceded);
+      const centerAi = aiY + PADDLE_H / 2;
+      const centerBall = ballY + BALL / 2;
+      fitnessScore += 0.03 * (1 - Math.min(1, Math.abs(centerAi - centerBall) / (H / 2)));
 
+      if (render) drawScene(playerY, aiY, ballX, ballY, generation, fitnessScore, returned, points, conceded);
       frames++;
-      if (frames < 2400) animId = requestAnimationFrame(loop);
-      else updateStats("Finished watching the current best bot.");
+    }
+
+    return { fitness: fitnessScore, returned, points, conceded };
+  }
+
+  function evaluatePopulation() {
+    let sumFitness = 0, sumReturned = 0, sumPoints = 0, sumConceded = 0;
+    for (const member of population) {
+      let totalFitness = 0, totalR = 0, totalP = 0, totalC = 0;
+      for (let i = 0; i < MATCHES_PER_BOT; i++) {
+        const r = simulateMatch(member.brain, false);
+        totalFitness += r.fitness;
+        totalR += r.returned;
+        totalP += r.points;
+        totalC += r.conceded;
+      }
+      member.fitness = totalFitness / MATCHES_PER_BOT;
+      member.avgReturned = totalR / MATCHES_PER_BOT;
+      member.avgPoints = totalP / MATCHES_PER_BOT;
+      member.avgConceded = totalC / MATCHES_PER_BOT;
+      sumFitness += member.fitness;
+      sumReturned += member.avgReturned;
+      sumPoints += member.avgPoints;
+      sumConceded += member.avgConceded;
+    }
+
+    population.sort((a, b) => b.fitness - a.fitness);
+    const best = population[0];
+    if (best.fitness > bestFitnessEver) {
+      bestFitnessEver = best.fitness;
+      bestEver = cloneBrain(best.brain);
+    }
+
+    return {
+      bestFitness: best.fitness,
+      avgFitness: sumFitness / population.length,
+      bestPoints: best.avgPoints,
+      bestConceded: best.avgConceded,
+      bestReturned: best.avgReturned,
+      avgPoints: sumPoints / population.length,
+      avgConceded: sumConceded / population.length,
+      avgReturned: sumReturned / population.length
+    };
+  }
+
+  function evolveOneGeneration() {
+    const metricsGen = evaluatePopulation();
+    generation++;
+
+    trainingHistory.push({
+      gen: generation,
+      best: metricsGen.bestFitness,
+      avg: metricsGen.avgFitness,
+      points: metricsGen.bestPoints,
+      conceded: metricsGen.bestConceded,
+      returned: metricsGen.bestReturned
+    });
+    if (trainingHistory.length > 260) trainingHistory.shift();
+
+    const elites = population.slice(0, ELITE).map((m) => ({ brain: cloneBrain(m.brain), fitness: 0 }));
+    const next = elites.slice();
+    while (next.length < POP) {
+      const parent = elites[Math.floor(Math.random() * elites.length)];
+      next.push({ brain: mutateBrain(parent.brain), fitness: 0 });
+    }
+    population = next;
+
+    flashTicks = 4;
+    logEvent(`Gen ${generation}: best=${metricsGen.bestFitness.toFixed(2)} avg=${metricsGen.avgFitness.toFixed(2)} points=${metricsGen.bestPoints.toFixed(2)} conceded=${metricsGen.bestConceded.toFixed(2)} returned=${metricsGen.bestReturned.toFixed(2)}`);
+    drawFitnessChart();
+    drawMetricsChart();
+    return metricsGen;
+  }
+
+  function drawAxes(c, minY, maxY, xLabel) {
+    c.ctx.strokeStyle = '#9ca3af';
+    c.ctx.lineWidth = 1;
+    c.ctx.beginPath();
+    c.ctx.moveTo(36, 10);
+    c.ctx.lineTo(36, c.height - 24);
+    c.ctx.lineTo(c.width - 10, c.height - 24);
+    c.ctx.stroke();
+
+    c.ctx.fillStyle = '#374151';
+    c.ctx.font = '12px Arial';
+    c.ctx.fillText(maxY.toFixed(1), 4, 16);
+    c.ctx.fillText(minY.toFixed(1), 4, c.height - 28);
+
+    if (trainingHistory.length > 1) {
+      const first = trainingHistory[0].gen;
+      const last = trainingHistory[trainingHistory.length - 1].gen;
+      c.ctx.fillText(`Gen ${first}`, 38, c.height - 8);
+      c.ctx.fillText(`Gen ${last}`, c.width - 70, c.height - 8);
+    }
+    c.ctx.fillText(xLabel, Math.floor(c.width / 2) - 40, c.height - 8);
+  }
+
+  function drawSeries(c, arr, accessor, color, minY, rangeY) {
+    c.ctx.strokeStyle = color;
+    c.ctx.lineWidth = 2;
+    c.ctx.beginPath();
+    arr.forEach((d, i) => {
+      const x = 36 + i * ((c.width - 46) / Math.max(1, arr.length - 1));
+      const y = (c.height - 24) - ((accessor(d) - minY) / rangeY) * (c.height - 34);
+      if (i === 0) c.ctx.moveTo(x, y);
+      else c.ctx.lineTo(x, y);
+    });
+    c.ctx.stroke();
+  }
+
+  function drawFitnessChart() {
+    const c = fitness;
+    c.ctx.clearRect(0, 0, c.width, c.height);
+    c.ctx.fillStyle = '#f9fafb';
+    c.ctx.fillRect(0, 0, c.width, c.height);
+
+    if (trainingHistory.length === 0) {
+      c.ctx.fillStyle = '#374151';
+      c.ctx.fillText('Fitness by generation (best/average).', 10, 20);
+      return;
+    }
+
+    const minY = Math.min(...trainingHistory.flatMap((d) => [d.best, d.avg]));
+    const maxY = Math.max(...trainingHistory.flatMap((d) => [d.best, d.avg]));
+    const rangeY = Math.max(1, maxY - minY);
+    drawAxes(c, minY, maxY, 'generation axis');
+    drawSeries(c, trainingHistory, (d) => d.best, '#0366d6', minY, rangeY);
+    drawSeries(c, trainingHistory, (d) => d.avg, '#d97706', minY, rangeY);
+  }
+
+  function drawMetricsChart() {
+    const c = metrics;
+    c.ctx.clearRect(0, 0, c.width, c.height);
+    c.ctx.fillStyle = '#f9fafb';
+    c.ctx.fillRect(0, 0, c.width, c.height);
+
+    if (trainingHistory.length === 0) {
+      c.ctx.fillStyle = '#374151';
+      c.ctx.fillText('Points / conceded / returns by generation (best bot).', 10, 20);
+      return;
+    }
+
+    const minY = Math.min(...trainingHistory.flatMap((d) => [d.points, d.conceded, d.returned]));
+    const maxY = Math.max(...trainingHistory.flatMap((d) => [d.points, d.conceded, d.returned]));
+    const rangeY = Math.max(1, maxY - minY);
+    drawAxes(c, minY, maxY, 'generation axis');
+    drawSeries(c, trainingHistory, (d) => d.points, '#16a34a', minY, rangeY);
+    drawSeries(c, trainingHistory, (d) => d.conceded, '#b91c1c', minY, rangeY);
+    drawSeries(c, trainingHistory, (d) => d.returned, '#7c3aed', minY, rangeY);
+  }
+
+  function updateStats(extra = '') {
+    const latest = trainingHistory[trainingHistory.length - 1];
+    const bestGen = latest ? latest.best.toFixed(2) : 'n/a';
+    const avgGen = latest ? latest.avg.toFixed(2) : 'n/a';
+    const pts = latest ? latest.points.toFixed(2) : 'n/a';
+    const con = latest ? latest.conceded.toFixed(2) : 'n/a';
+    const ret = latest ? latest.returned.toFixed(2) : 'n/a';
+
+    stats.textContent =
+`Generation: ${generation}
+Population: ${POP}
+Elite kept each generation: ${ELITE}
+Matches per bot per generation: ${MATCHES_PER_BOT}
+Playback speed: ${speedMultiplier.toFixed(2)}x
+Auto-train while watching: ${autoTrain.checked ? 'ON' : 'OFF'} @ ${trainRatePerSec.toFixed(1)} gen/s
+
+Latest generation metrics (best bot):
+- Fitness: ${bestGen}
+- Points won: ${pts}
+- Points conceded: ${con}
+- Returns: ${ret}
+- Population average fitness: ${avgGen}
+Best fitness ever: ${bestFitnessEver.toFixed(2)}
+
+Learning logic:
+- One generation = evaluate all bots -> keep elites -> mutate to refill population.
+- Scripted/non-adaptive opponent = fixed left-paddle rule that never learns.
+- Learning is real-time only when training is running (buttons, step, or auto-train during watch).
+- During pure watch mode with auto-train OFF, gameplay uses current best model without new learning.
+
+${extra}`;
+  }
+
+  function drawScene(playerY, aiY, ballX, ballY, gen, fit, returned, points, conceded) {
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(PLAYER_X, playerY, PADDLE_W, PADDLE_H);
+    ctx.fillStyle = '#2563eb';
+    ctx.fillRect(AI_X, aiY, PADDLE_W, PADDLE_H);
+    ctx.fillStyle = '#111827';
+    ctx.fillRect(ballX, ballY, BALL, BALL);
+
+    if (flashTicks > 0) {
+      ctx.fillStyle = 'rgba(250, 204, 21, 0.28)';
+      ctx.fillRect(0, 0, W, H);
+      flashTicks--;
+    }
+
+    ctx.setLineDash([6, 6]);
+    ctx.beginPath();
+    ctx.moveTo(W / 2, 0);
+    ctx.lineTo(W / 2, H);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillStyle = '#111827';
+    ctx.fillText(`Gen ${gen}`, 10, 14);
+    ctx.fillText(`Fitness ${fit.toFixed(1)}`, 10, 30);
+    ctx.fillText(`Returns ${returned}  AI points ${points}  Conceded ${conceded}`, 10, 46);
+  }
+
+  function stopAnim() {
+    if (animId !== null) cancelAnimationFrame(animId);
+    animId = null;
+    isWatching = false;
+  }
+
+  function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
+
+  async function trainMany(gens) {
+    if (isTraining) return;
+    isTraining = true;
+    stopAnim();
+    for (let i = 0; i < gens; i++) {
+      evolveOneGeneration();
+      updateStats(`Training generation ${i + 1}/${gens}...`);
+      if (visualizeTraining.checked) await sleep(Math.max(10, 200 / Math.max(0.25, speedMultiplier)));
+    }
+    isTraining = false;
+    updateStats(`Trained ${gens} generation(s).`);
+  }
+
+  function watchBest() {
+    stopAnim();
+    isWatching = true;
+
+    const brain = bestEver ? cloneBrain(bestEver) : cloneBrain(population[0].brain);
+    let playerY = H / 2 - PADDLE_H / 2;
+    let aiY = H / 2 - PADDLE_H / 2;
+    let ballX = W / 2;
+    let ballY = H / 2;
+    let vx = -(4 + Math.random() * 2);
+    let vy = (Math.random() * 2 - 1) * 3;
+    let returned = 0, points = 0, conceded = 0, fit = 0;
+
+    let stepBudget = 0;
+    let trainBudget = 0;
+
+    function stepOneTick() {
+      const targetPlayer = ballY - PADDLE_H / 2;
+      playerY += clamp(targetPlayer - playerY, -4.4, 4.4);
+      playerY = clamp(playerY, 0, H - PADDLE_H);
+
+      const input = [ballX / W, ballY / H, vx / 6, vy / 6, aiY / (H - PADDLE_H)];
+      const out = forward(brain, input);
+      aiY += out * 5.2;
+      aiY = clamp(aiY, 0, H - PADDLE_H);
+
+      ballX += vx;
+      ballY += vy;
+
+      if (ballY <= 0 || ballY >= H - BALL) {
+        vy *= -1;
+        ballY = clamp(ballY, 0, H - BALL);
+      }
+
+      if (ballX <= PLAYER_X + PADDLE_W && ballY + BALL >= playerY && ballY <= playerY + PADDLE_H && vx < 0) {
+        ballX = PLAYER_X + PADDLE_W;
+        vx *= -1;
+        const offset = (ballY + BALL / 2) - (playerY + PADDLE_H / 2);
+        vy += offset * 0.05;
+      }
+
+      if (ballX + BALL >= AI_X && ballY + BALL >= aiY && ballY <= aiY + PADDLE_H && vx > 0) {
+        ballX = AI_X - BALL;
+        vx *= -1;
+        const offset = (ballY + BALL / 2) - (aiY + PADDLE_H / 2);
+        vy += offset * 0.05;
+        fit += 4;
+        returned++;
+      }
+
+      if (ballX < 0) {
+        fit += 25; points++;
+        ballX = W / 2; ballY = H / 2;
+        vx = 4 + Math.random() * 2;
+        vy = (Math.random() * 2 - 1) * 3;
+      } else if (ballX > W) {
+        fit -= 35; conceded++;
+        ballX = W / 2; ballY = H / 2;
+        vx = -(4 + Math.random() * 2);
+        vy = (Math.random() * 2 - 1) * 3;
+      }
+
+      fit += 0.03 * (1 - Math.min(1, Math.abs((aiY + PADDLE_H / 2) - (ballY + BALL / 2)) / (H / 2)));
+    }
+
+    function loop() {
+      if (!isWatching) return;
+
+      stepBudget += Math.max(0.25, speedMultiplier);
+      while (stepBudget >= 1) {
+        stepOneTick();
+        stepBudget -= 1;
+      }
+
+      if (autoTrain.checked) {
+        trainBudget += (trainRatePerSec / 60) * Math.max(0.25, speedMultiplier);
+        while (trainBudget >= 1) {
+          evolveOneGeneration();
+          trainBudget -= 1;
+        }
+      }
+
+      drawScene(playerY, aiY, ballX, ballY, generation, fit, returned, points, conceded);
+      updateStats('Watching continuously. Stop manually when desired.');
+      animId = requestAnimationFrame(loop);
     }
 
     loop();
-    updateStats("Watching the current best bot.");
+    logEvent('Watch mode started.');
   }
 
-  document.getElementById("train1").onclick = () => trainMany(1);
-  document.getElementById("train20").onclick = () => trainMany(20);
-  document.getElementById("watch").onclick = watchBest;
-  document.getElementById("reset").onclick = () => {
-    stopAnim();
-    generation = 0;
-    bestFitnessEver = -Infinity;
-    bestEver = null;
-    population = makePopulation();
-    updateStats("Population reset.");
-    ctx.clearRect(0, 0, W, H);
-  };
-
-  updateStats("Fresh population. Train a few generations, then watch the best bot.");
-
-  function openVersionsModal() {
-    document.getElementById('versionsModal').classList.add('show');
-    document.getElementById('versionsModal').setAttribute('aria-hidden', 'false');
-  }
-
-  function closeVersionsModal() {
-    document.getElementById('versionsModal').classList.remove('show');
-    document.getElementById('versionsModal').setAttribute('aria-hidden', 'true');
-  }
-
-  async function loadVersionHistory() {
-    const list = document.getElementById('versionsList');
-    list.textContent = 'Loading history...';
-    try {
-      const res = await fetch(withBust(`${getRootUrl()}pong_evolution.versions.json`), { cache: 'no-store' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      const versions = Array.isArray(data.versions) ? data.versions : [];
-      const current = getCurrentAppFile();
-
-      list.innerHTML = versions.map((entry) => {
+  function renderVersionList(list, versions, current, warning = '') {
+    list.innerHTML = `${warning ? `<div style="margin-bottom:8px;color:#b00020;">${warning}</div>` : ''}` +
+      versions.map((entry) => {
         const active = entry.appFile === current ? ' active' : '';
         const changes = (entry.changes || []).map((c) => `<li>${c}</li>`).join('');
         return `<div class="version-item${active}">
@@ -465,29 +706,86 @@ ${extra}`;
         </div>`;
       }).join('');
 
-      list.querySelectorAll('button[data-app-file]').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const target = btn.getAttribute('data-app-file');
-          if (target && target !== getCurrentAppFile()) {
-            window.location.href = withBust(`${getRootUrl()}${target}`);
-          }
-        });
+    list.querySelectorAll('button[data-app-file]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const target = btn.getAttribute('data-app-file');
+        if (target && target !== getCurrentAppFile()) window.location.href = withBust(`${getRootUrl()}${target}`);
       });
+    });
+  }
+
+  async function loadVersionHistory() {
+    const list = document.getElementById('versionsList');
+    list.textContent = 'Loading history...';
+    try {
+      const res = await fetch(withBust(`${getRootUrl()}pong_evolution.versions.json`), { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      renderVersionList(list, Array.isArray(data.versions) ? data.versions : [], getCurrentAppFile());
     } catch (err) {
-      list.textContent = `Unable to load version history: ${err.message}`;
+      renderVersionList(list, EMBEDDED_HISTORY.versions, getCurrentAppFile(), `Unable to load version history JSON (${err.message}). Showing embedded fallback history.`);
     }
   }
 
-  document.getElementById('appVersion').textContent = APP_VERSION;
-  document.getElementById('openVersions').addEventListener('click', async () => {
-    openVersionsModal();
-    await loadVersionHistory();
+  // controls wiring
+  document.getElementById('train1').onclick = () => trainMany(1);
+  document.getElementById('train20').onclick = () => trainMany(20);
+  document.getElementById('step1').onclick = () => { evolveOneGeneration(); updateStats('Advanced +1 generation.'); };
+  document.getElementById('step10').onclick = () => {
+    for (let i = 0; i < 10; i++) evolveOneGeneration();
+    updateStats('Advanced +10 generations.');
+  };
+  document.getElementById('watch').onclick = watchBest;
+  document.getElementById('stopWatch').onclick = () => { stopAnim(); updateStats('Animation stopped manually.'); logEvent('Watch mode stopped manually.'); };
+  document.getElementById('reset').onclick = () => {
+    stopAnim();
+    generation = 0;
+    bestFitnessEver = -Infinity;
+    bestEver = null;
+    population = makePopulation();
+    trainingHistory.length = 0;
+    drawFitnessChart();
+    drawMetricsChart();
+    ctx.clearRect(0, 0, W, H);
+    updateStats('Population reset.');
+    logEvent('Population reset.');
+  };
+
+  speedControl.addEventListener('input', () => {
+    speedMultiplier = Number(speedControl.value) || 1;
+    speedValue.textContent = `${speedMultiplier.toFixed(2)}x`;
+    updateStats('Updated playback speed.');
   });
-  document.getElementById('closeVersions').addEventListener('click', closeVersionsModal);
-  document.getElementById('versionsModal').addEventListener('click', (e) => {
-    if (e.target.id === 'versionsModal') closeVersionsModal();
+  trainRate.addEventListener('input', () => {
+    trainRatePerSec = Number(trainRate.value) || 0;
+    trainRateValue.textContent = `${trainRatePerSec.toFixed(0)} gen/s`;
+    updateStats('Updated train rate.');
   });
 
+  speedValue.textContent = `${speedMultiplier.toFixed(2)}x`;
+  trainRateValue.textContent = `${trainRatePerSec.toFixed(0)} gen/s`;
+
+  document.getElementById('appVersion').textContent = APP_VERSION;
+  document.getElementById('openVersions').addEventListener('click', async () => {
+    document.getElementById('versionsModal').classList.add('show');
+    document.getElementById('versionsModal').setAttribute('aria-hidden', 'false');
+    await loadVersionHistory();
+  });
+  document.getElementById('closeVersions').addEventListener('click', () => {
+    document.getElementById('versionsModal').classList.remove('show');
+    document.getElementById('versionsModal').setAttribute('aria-hidden', 'true');
+  });
+  document.getElementById('versionsModal').addEventListener('click', (e) => {
+    if (e.target.id === 'versionsModal') {
+      document.getElementById('versionsModal').classList.remove('show');
+      document.getElementById('versionsModal').setAttribute('aria-hidden', 'true');
+    }
+  });
+
+  drawFitnessChart();
+  drawMetricsChart();
+  updateStats('Ready. Train generations, or watch continuously with optional auto-train.');
+  logEvent('Initialized app.');
 })();
 </script>
 </body>

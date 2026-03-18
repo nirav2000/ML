@@ -1,10 +1,60 @@
 {
-  "latest": "1.2.0",
+  "latest": "1.4.0",
   "versions": [
+    {
+      "version": "1.4.0",
+      "label": "HiDPI charts + axis + live evolution controls",
+      "appFile": "pong_evolution.html",
+      "changes": [
+        "Added high-DPI chart rendering and generation axis labels.",
+        "Added continuous watch with optional auto-train and step-generation controls.",
+        "Moved stats panel to right pane and moved legend outside gameplay canvas."
+      ]
+    },
+    {
+      "version": "1.3.1",
+      "label": "Clearer training metrics + manual stop + color cues",
+      "appFile": "versions/1.3.1/pong_evolution.html",
+      "changes": [
+        "Improved training chart to plot both best and average fitness per generation.",
+        "Added explicit Stop animation button and stronger stop conditions for watch mode.",
+        "Color-coded scripted opponent vs AI paddle and clarified score labels/definitions."
+      ]
+    },
+    {
+      "version": "1.3.0",
+      "label": "Training chart + playback speed controls",
+      "appFile": "versions/1.3.0/pong_evolution.html",
+      "changes": [
+        "Added live training chart to visualize best fitness over generations.",
+        "Added speed slider affecting training pacing and watch playback speed.",
+        "Archived v1.2.2 under versions/1.2.2/pong_evolution.html."
+      ]
+    },
+    {
+      "version": "1.2.2",
+      "label": "UI startup hardening + safer changelog rendering",
+      "appFile": "versions/1.2.2/pong_evolution.html",
+      "changes": [
+        "Added global error hooks to surface startup/runtime failures in-page.",
+        "Refactored changelog rendering into a shared helper and guarded modal element wiring.",
+        "Archived v1.2.1 under versions/1.2.1/pong_evolution.html."
+      ]
+    },
+    {
+      "version": "1.2.1",
+      "label": "Startup reliability + history fallback",
+      "appFile": "versions/1.2.1/pong_evolution.html",
+      "changes": [
+        "Added defensive startup checks so runtime errors are surfaced in-page.",
+        "Added changelog fallback data so version history still works when JSON fetch fails.",
+        "Archived the previous current build as versions/1.2.0/pong_evolution.html."
+      ]
+    },
     {
       "version": "1.2.0",
       "label": "Fixed GitHub Pages base-path version loading",
-      "appFile": "pong_evolution.html",
+      "appFile": "versions/1.2.0/pong_evolution.html",
       "changes": [
         "Fixed root URL detection so changelog/version switching works on project pages (e.g. /ML/...).",
         "Ensured current-file detection resolves correctly when loaded from root or /versions/... paths.",

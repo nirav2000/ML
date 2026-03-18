@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pong Evolution — Plain JS</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.4; }
+    canvas { border: 1px solid #222; display:block; margin: 12px 0; }
+    button { margin: 4px 6px 4px 0; padding: 8px 12px; }
+    #stats { white-space: pre-wrap; background: #f4f4f4; padding: 10px; border-radius: 8px; }
+
+    .footer { margin-top: 10px; font-size: 12px; color: #555; }
+    .version-link { color: #0366d6; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      display: none;
+      place-items: center;
+      padding: 20px;
+      z-index: 100;
+    }
+    .modal.show { display: grid; }
+    .modal-card {
+      width: min(760px, 100%);
+      max-height: 82vh;
+      overflow: auto;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .modal-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+    .version-item { border:1px solid #ddd; border-radius:10px; padding:10px; margin-bottom:8px; }
+    .version-item.active { border-color:#0366d6; box-shadow:0 0 0 1px rgba(3,102,214,0.25); }
+    .version-item h3 { margin:0 0 6px; font-size:14px; }
+    .version-item ul { margin: 6px 0 0 18px; }
+  </style>
+</head>
+<body>
+  <h1>Pong Evolution — Plain JS</h1>
+  <p>This version uses a very small neural net plus mutation/selection. It is closer to the “many bots get tested, keep the better ones, mutate, repeat” pattern.</p>
+
+  <div>
+    <button id="train1">Train 1 generation</button>
+    <button id="train20">Train 20 generations</button>
+    <button id="watch">Watch best bot</button>
+    <button id="reset">Reset population</button>
+  </div>
+
+  <canvas id="game" width="640" height="400"></canvas>
+  <div id="stats"></div>
+
+
+  <div class="footer">
+    Version <span id="appVersion">1.2.0</span> · <span class="version-link" id="openVersions">View changelog</span>
+  </div>
+
+  <div class="modal" id="versionsModal" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head">
+        <strong>Pong Evolution Version History</strong>
+        <button id="closeVersions">Close</button>
+      </div>
+      <div id="versionsList"></div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const APP_FILE = "pong_evolution.html";
+  const APP_VERSION = "1.2.0";
+
+  function getRootPathPrefix() {
+    const p = window.location.pathname;
+    const versionIdx = p.indexOf('/versions/');
+    if (versionIdx !== -1) return p.slice(0, versionIdx + 1);
+
+    const appIdx = p.lastIndexOf(`/${APP_FILE}`);
+    if (appIdx !== -1) return p.slice(0, appIdx + 1);
+
+    const lastSlash = p.lastIndexOf('/');
+    return lastSlash === -1 ? '/' : p.slice(0, lastSlash + 1);
+  }
+
+  function getRootUrl() {
+    const prefix = getRootPathPrefix();
+    return `${window.location.origin}${prefix}`;
+  }
+
+  function withBust(url) {
+    const sep = url.includes('?') ? '&' : '?';
+    return `${url}${sep}v=${Date.now()}`;
+  }
+
+  function getCurrentAppFile() {
+    const prefix = getRootPathPrefix();
+    const path = window.location.pathname;
+    const rel = path.startsWith(prefix) ? path.slice(prefix.length) : path.replace(/^\//, '');
+    if (rel.startsWith('versions/')) return rel;
+    return APP_FILE;
+  }
+
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const stats = document.getElementById("stats");
+
+  const W = canvas.width;
+  const H = canvas.height;
+  const PADDLE_H = 80;
+  const PADDLE_W = 12;
+  const BALL = 10;
+  const PLAYER_X = 20;
+  const AI_X = W - 20 - PADDLE_W;
+  const POP = 60;
+  const ELITE = 8;
+  const MUTATION = 0.18;
+  const MATCHES_PER_BOT = 5;
+
+  let generation = 0;
+  let bestFitnessEver = -Infinity;
+  let bestEver = null;
+  let animId = null;
+
+  function clamp(v, lo, hi) {
+    return Math.max(lo, Math.min(hi, v));
+  }
+
+  function randn() {
+    return (Math.random() * 2 - 1) + (Math.random() * 2 - 1);
+  }
+
+  function makeBrain() {
+    return {
+      // 5 inputs -> 6 hidden -> 1 output
+      w1: Array.from({ length: 6 }, () => Array.from({ length: 5 }, () => randn() * 0.6)),
+      b1: Array.from({ length: 6 }, () => randn() * 0.3),
+      w2: Array.from({ length: 1 }, () => Array.from({ length: 6 }, () => randn() * 0.6)),
+      b2: [randn() * 0.3]
+    };
+  }
+
+  function cloneBrain(brain) {
+    return {
+      w1: brain.w1.map(row => row.slice()),
+      b1: brain.b1.slice(),
+      w2: brain.w2.map(row => row.slice()),
+      b2: brain.b2.slice()
+    };
+  }
+
+  function mutateBrain(brain) {
+    const out = cloneBrain(brain);
+    for (const row of out.w1) for (let i = 0; i < row.length; i++) if (Math.random() < MUTATION) row[i] += randn() * 0.25;
+    for (let i = 0; i < out.b1.length; i++) if (Math.random() < MUTATION) out.b1[i] += randn() * 0.25;
+    for (const row of out.w2) for (let i = 0; i < row.length; i++) if (Math.random() < MUTATION) row[i] += randn() * 0.25;
+    for (let i = 0; i < out.b2.length; i++) if (Math.random() < MUTATION) out.b2[i] += randn() * 0.25;
+    return out;
+  }
+
+  function tanh(x) {
+    return Math.tanh(x);
+  }
+
+  function forward(brain, input) {
+    const hidden = brain.w1.map((row, i) => tanh(row.reduce((s, w, j) => s + w * input[j], brain.b1[i])));
+    const out = tanh(brain.w2[0].reduce((s, w, j) => s + w * hidden[j], brain.b2[0]));
+    return out;
+  }
+
+  function makePopulation() {
+    return Array.from({ length: POP }, () => ({ brain: makeBrain(), fitness: 0 }));
+  }
+
+  let population = makePopulation();
+
+  function simulateMatch(brain, render = false) {
+    let playerY = H / 2 - PADDLE_H / 2;
+    let aiY = H / 2 - PADDLE_H / 2;
+    let ballX = W / 2;
+    let ballY = H / 2;
+    let vx = (Math.random() < 0.5 ? -1 : 1) * (4 + Math.random() * 2);
+    let vy = (Math.random() * 2 - 1) * 3;
+    let fitness = 0;
+    let frames = 0;
+    let returned = 0;
+    let scored = 0;
+    let conceded = 0;
+
+    while (frames < 1800) {
+      // scripted left paddle: follows imperfectly
+      const targetPlayer = ballY - PADDLE_H / 2;
+      const diffP = targetPlayer - playerY;
+      playerY += clamp(diffP, -4.4, 4.4);
+      playerY = clamp(playerY, 0, H - PADDLE_H);
+
+      // AI right paddle
+      const input = [
+        ballX / W,
+        ballY / H,
+        vx / 6,
+        vy / 6,
+        aiY / (H - PADDLE_H)
+      ];
+      const out = forward(brain, input);
+      aiY += out * 5.2;
+      aiY = clamp(aiY, 0, H - PADDLE_H);
+
+      ballX += vx;
+      ballY += vy;
+
+      if (ballY <= 0 || ballY >= H - BALL) {
+        vy *= -1;
+        ballY = clamp(ballY, 0, H - BALL);
+      }
+
+      // left paddle
+      if (ballX <= PLAYER_X + PADDLE_W &&
+          ballY + BALL >= playerY &&
+          ballY <= playerY + PADDLE_H &&
+          vx < 0) {
+        ballX = PLAYER_X + PADDLE_W;
+        vx *= -1;
+        const offset = (ballY + BALL / 2) - (playerY + PADDLE_H / 2);
+        vy += offset * 0.05;
+      }
+
+      // right paddle
+      if (ballX + BALL >= AI_X &&
+          ballY + BALL >= aiY &&
+          ballY <= aiY + PADDLE_H &&
+          vx > 0) {
+        ballX = AI_X - BALL;
+        vx *= -1;
+        const offset = (ballY + BALL / 2) - (aiY + PADDLE_H / 2);
+        vy += offset * 0.05;
+        fitness += 4;
+        returned += 1;
+      }
+
+      // scoring
+      if (ballX < 0) {
+        // AI scored
+        fitness += 25;
+        scored += 1;
+        ballX = W / 2; ballY = H / 2;
+        vx = 4 + Math.random() * 2;
+        vy = (Math.random() * 2 - 1) * 3;
+      } else if (ballX > W) {
+        // AI conceded
+        fitness -= 35;
+        conceded += 1;
+        ballX = W / 2; ballY = H / 2;
+        vx = -(4 + Math.random() * 2);
+        vy = (Math.random() * 2 - 1) * 3;
+      }
+
+      // small shaping reward: be near the ball vertically
+      const centerAi = aiY + PADDLE_H / 2;
+      const centerBall = ballY + BALL / 2;
+      fitness += 0.03 * (1 - Math.min(1, Math.abs(centerAi - centerBall) / (H / 2)));
+
+      if (render) {
+        drawScene(playerY, aiY, ballX, ballY, generation, fitness, returned, scored, conceded);
+      }
+
+      frames++;
+    }
+
+    return { fitness, returned, scored, conceded };
+  }
+
+  function evaluatePopulation() {
+    for (const member of population) {
+      let total = 0;
+      for (let i = 0; i < MATCHES_PER_BOT; i++) total += simulateMatch(member.brain, false).fitness;
+      member.fitness = total / MATCHES_PER_BOT;
+    }
+    population.sort((a, b) => b.fitness - a.fitness);
+
+    if (population[0].fitness > bestFitnessEver) {
+      bestFitnessEver = population[0].fitness;
+      bestEver = cloneBrain(population[0].brain);
+    }
+  }
+
+  function nextGeneration() {
+    evaluatePopulation();
+    const elites = population.slice(0, ELITE).map(m => ({ brain: cloneBrain(m.brain), fitness: 0 }));
+    const next = elites.slice();
+
+    while (next.length < POP) {
+      const parent = elites[Math.floor(Math.random() * elites.length)];
+      next.push({ brain: mutateBrain(parent.brain), fitness: 0 });
+    }
+
+    population = next;
+    generation++;
+  }
+
+  function trainMany(gens) {
+    for (let i = 0; i < gens; i++) nextGeneration();
+    updateStats(`Trained ${gens} generation(s).`);
+  }
+
+  function updateStats(extra = "") {
+    const bestCurrent = population[0] ? population[0].fitness : 0;
+    stats.textContent =
+`Generation: ${generation}
+Population: ${POP}
+Elite kept each generation: ${ELITE}
+Best fitness this generation: ${bestCurrent.toFixed(2)}
+Best fitness ever: ${bestFitnessEver.toFixed(2)}
+
+Interpretation:
+- higher fitness means the bot returned more balls, stayed closer to the ball, scored more, and conceded less.
+
+${extra}`;
+  }
+
+  function drawScene(playerY, aiY, ballX, ballY, gen, fit, returned, scored, conceded) {
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillRect(PLAYER_X, playerY, PADDLE_W, PADDLE_H);
+    ctx.fillRect(AI_X, aiY, PADDLE_W, PADDLE_H);
+    ctx.fillRect(ballX, ballY, BALL, BALL);
+
+    ctx.setLineDash([6, 6]);
+    ctx.beginPath();
+    ctx.moveTo(W / 2, 0);
+    ctx.lineTo(W / 2, H);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.fillText(`Gen ${gen}`, 10, 14);
+    ctx.fillText(`Fitness ${fit.toFixed(1)}`, 10, 30);
+    ctx.fillText(`Returns ${returned}  AI score ${scored}  Conceded ${conceded}`, 10, 46);
+  }
+
+  function stopAnim() {
+    if (animId !== null) cancelAnimationFrame(animId);
+    animId = null;
+  }
+
+  function watchBest() {
+    stopAnim();
+    const brain = bestEver ? cloneBrain(bestEver) : cloneBrain(population[0].brain);
+
+    let playerY = H / 2 - PADDLE_H / 2;
+    let aiY = H / 2 - PADDLE_H / 2;
+    let ballX = W / 2;
+    let ballY = H / 2;
+    let vx = -(4 + Math.random() * 2);
+    let vy = (Math.random() * 2 - 1) * 3;
+    let returned = 0, scored = 0, conceded = 0, fitness = 0, frames = 0;
+
+    function loop() {
+      const targetPlayer = ballY - PADDLE_H / 2;
+      playerY += clamp(targetPlayer - playerY, -4.4, 4.4);
+      playerY = clamp(playerY, 0, H - PADDLE_H);
+
+      const input = [ballX / W, ballY / H, vx / 6, vy / 6, aiY / (H - PADDLE_H)];
+      const out = forward(brain, input);
+      aiY += out * 5.2;
+      aiY = clamp(aiY, 0, H - PADDLE_H);
+
+      ballX += vx;
+      ballY += vy;
+
+      if (ballY <= 0 || ballY >= H - BALL) {
+        vy *= -1;
+        ballY = clamp(ballY, 0, H - BALL);
+      }
+
+      if (ballX <= PLAYER_X + PADDLE_W &&
+          ballY + BALL >= playerY &&
+          ballY <= playerY + PADDLE_H &&
+          vx < 0) {
+        ballX = PLAYER_X + PADDLE_W;
+        vx *= -1;
+        const offset = (ballY + BALL / 2) - (playerY + PADDLE_H / 2);
+        vy += offset * 0.05;
+      }
+
+      if (ballX + BALL >= AI_X &&
+          ballY + BALL >= aiY &&
+          ballY <= aiY + PADDLE_H &&
+          vx > 0) {
+        ballX = AI_X - BALL;
+        vx *= -1;
+        const offset = (ballY + BALL / 2) - (aiY + PADDLE_H / 2);
+        vy += offset * 0.05;
+        fitness += 4;
+        returned++;
+      }
+
+      if (ballX < 0) {
+        fitness += 25;
+        scored++;
+        ballX = W / 2; ballY = H / 2;
+        vx = 4 + Math.random() * 2;
+        vy = (Math.random() * 2 - 1) * 3;
+      } else if (ballX > W) {
+        fitness -= 35;
+        conceded++;
+        ballX = W / 2; ballY = H / 2;
+        vx = -(4 + Math.random() * 2);
+        vy = (Math.random() * 2 - 1) * 3;
+      }
+
+      fitness += 0.03 * (1 - Math.min(1, Math.abs((aiY + PADDLE_H / 2) - (ballY + BALL / 2)) / (H / 2)));
+      drawScene(playerY, aiY, ballX, ballY, generation, fitness, returned, scored, conceded);
+
+      frames++;
+      if (frames < 2400) animId = requestAnimationFrame(loop);
+      else updateStats("Finished watching the current best bot.");
+    }
+
+    loop();
+    updateStats("Watching the current best bot.");
+  }
+
+  document.getElementById("train1").onclick = () => trainMany(1);
+  document.getElementById("train20").onclick = () => trainMany(20);
+  document.getElementById("watch").onclick = watchBest;
+  document.getElementById("reset").onclick = () => {
+    stopAnim();
+    generation = 0;
+    bestFitnessEver = -Infinity;
+    bestEver = null;
+    population = makePopulation();
+    updateStats("Population reset.");
+    ctx.clearRect(0, 0, W, H);
+  };
+
+  updateStats("Fresh population. Train a few generations, then watch the best bot.");
+
+  function openVersionsModal() {
+    document.getElementById('versionsModal').classList.add('show');
+    document.getElementById('versionsModal').setAttribute('aria-hidden', 'false');
+  }
+
+  function closeVersionsModal() {
+    document.getElementById('versionsModal').classList.remove('show');
+    document.getElementById('versionsModal').setAttribute('aria-hidden', 'true');
+  }
+
+  async function loadVersionHistory() {
+    const list = document.getElementById('versionsList');
+    list.textContent = 'Loading history...';
+    try {
+      const res = await fetch(withBust(`${getRootUrl()}pong_evolution.versions.json`), { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const versions = Array.isArray(data.versions) ? data.versions : [];
+      const current = getCurrentAppFile();
+
+      list.innerHTML = versions.map((entry) => {
+        const active = entry.appFile === current ? ' active' : '';
+        const changes = (entry.changes || []).map((c) => `<li>${c}</li>`).join('');
+        return `<div class="version-item${active}">
+          <h3>${entry.version} — ${entry.label || ''}</h3>
+          <div><button data-app-file="${entry.appFile}">Open this version</button></div>
+          <ul>${changes}</ul>
+        </div>`;
+      }).join('');
+
+      list.querySelectorAll('button[data-app-file]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const target = btn.getAttribute('data-app-file');
+          if (target && target !== getCurrentAppFile()) {
+            window.location.href = withBust(`${getRootUrl()}${target}`);
+          }
+        });
+      });
+    } catch (err) {
+      list.textContent = `Unable to load version history: ${err.message}`;
+    }
+  }
+
+  document.getElementById('appVersion').textContent = APP_VERSION;
+  document.getElementById('openVersions').addEventListener('click', async () => {
+    openVersionsModal();
+    await loadVersionHistory();
+  });
+  document.getElementById('closeVersions').addEventListener('click', closeVersionsModal);
+  document.getElementById('versionsModal').addEventListener('click', (e) => {
+    if (e.target.id === 'versionsModal') closeVersionsModal();
+  });
+
+})();
+</script>
+</body>
+</html>
