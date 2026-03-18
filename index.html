@@ -551,6 +551,28 @@
           { label: "Open dashboard", href: "./index.html", primary: false }
         ]
       }
+,
+      {
+        name: "Pong Duel Lab",
+        version: "v1.0.0",
+        href: "./pong_duel.html",
+        artLabel: "Head-to-head preview",
+        image: `${previewBase}pong-compare.svg`,
+        description:
+          "A head-to-head arena where the best evolved controller and the learned RL policy can train separately and then play each other directly.",
+        expect:
+          "You can expect a single shared Pong match, duel evaluations, and a practical way to compare how the two learned policies perform against each other instead of a scripted opponent.",
+        learn: [
+          "How separately trained agents behave when they finally face each other in the same environment.",
+          "How neuroevolution and RL differ not just during training, but also in direct competition.",
+          "How mirrored inputs let a right-side evolution policy be reused on the left side of the arena."
+        ],
+        links: [
+          { label: "Launch Duel Lab", href: "./pong_duel.html", primary: true },
+          { label: "Changelog data", href: "./pong_duel.versions.json", primary: false },
+          { label: "Open compare lab", href: "./pong_compare.html", primary: false }
+        ]
+      }
     ];
 
     const appGrid = document.getElementById("appGrid");

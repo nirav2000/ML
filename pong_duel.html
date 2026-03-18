@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pong Duel Lab — Evolution vs RL</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.4; }
+    .app-shell { display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap; }
+    .left-pane { flex: 1 1 680px; min-width: 0; }
+    .right-pane { width: 360px; }
+    canvas { border:1px solid #222; display:block; margin:10px 0; background:#fff; width:100%; max-width:640px; height:auto; }
+    button { margin:4px 6px 4px 0; padding:8px 12px; }
+    .controls { margin:8px 0 10px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    #stats { white-space: pre-wrap; background:#f4f4f4; padding:10px; border-radius:8px; min-height:300px; }
+    #log { white-space: pre-wrap; background:#111827; color:#e5e7eb; padding:10px; border-radius:8px; height:220px; overflow:auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; }
+    .legend { background:#fafafa; border:1px solid #ddd; border-radius:8px; padding:10px; font-size:13px; margin-bottom:10px; }
+    .dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+    .footer { margin-top:10px; font-size:12px; color:#555; }
+    .version-link { color:#0366d6; cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
+    .modal { position: fixed; inset:0; background: rgba(0,0,0,0.55); display:none; place-items:center; padding:20px; z-index:100; }
+    .modal.show { display:grid; }
+    .modal-card { width:min(760px, 100%); max-height:82vh; overflow:auto; background:#fff; border:1px solid #ddd; border-radius:12px; padding:12px; }
+    .modal-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+    .version-item { border:1px solid #ddd; border-radius:10px; padding:10px; margin-bottom:8px; }
+    .version-item.active { border-color:#0366d6; box-shadow:0 0 0 1px rgba(3,102,214,0.25); }
+    .version-item h3 { margin:0 0 6px; font-size:14px; }
+    .version-item ul { margin:6px 0 0 18px; }
+    @media (max-width: 1120px) { .right-pane { width:100%; } }
+  </style>
+</head>
+<body>
+  <h1>Pong Duel Lab — Evolution vs RL</h1>
+  <p>Train the Evolution paddle and the RL paddle independently against their usual scripted practice opponent, then let them play each other directly in a shared arena.</p>
+
+  <div class="controls">
+    <button id="trainEvo1">Train Evolution +1 gen</button>
+    <button id="trainEvo10">Train Evolution +10 gen</button>
+    <button id="trainRl10">Train RL +10 ep</button>
+    <button id="trainRl100">Train RL +100 ep</button>
+    <button id="trainBoth">Train both bundle</button>
+  </div>
+
+  <div class="controls">
+    <button id="evalDuel">Evaluate 5 duel matches</button>
+    <button id="watchDuel">Watch live duel</button>
+    <button id="stopWatch">Stop animation</button>
+    <button id="resetAll">Reset all agents</button>
+  </div>
+
+  <div class="controls">
+    <label for="speedControl"><strong>Playback speed</strong></label>
+    <input id="speedControl" type="range" min="0.25" max="8" step="0.25" value="1" />
+    <span id="speedValue">1.00x</span>
+    <label><input id="visualizeEval" type="checkbox" checked /> Visualize duel evaluation</label>
+  </div>
+
+  <div class="app-shell">
+    <div class="left-pane">
+      <canvas id="game" width="640" height="400"></canvas>
+      <canvas id="duelChart" width="640" height="170"></canvas>
+    </div>
+
+    <div class="right-pane">
+      <div class="legend">
+        <div style="margin-bottom:8px;"><strong>How this duel works</strong> The left red paddle uses the best controller found by neuroevolution. The right blue paddle uses the RL policy learned through Q-learning. Both were trained separately first, then they play head to head in this shared match.</div>
+        <div><span class="dot" style="background:#ef4444"></span>Red paddle: Evolution agent, mirrored so it can play from the left side.</div>
+        <div><span class="dot" style="background:#2563eb"></span>Blue paddle: RL policy using the learned Q-table on the right side.</div>
+        <div><span class="dot" style="background:#7c3aed"></span>Duel chart: score margin (Evolution minus RL) per completed duel match.</div>
+      </div>
+      <div id="stats"></div>
+      <h3 style="margin:10px 0 6px;">Training / duel log</h3>
+      <div id="log"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Version <span id="appVersion">1.0.0</span> · <span class="version-link" id="openVersions">View changelog</span>
+  </div>
+
+  <div class="modal" id="versionsModal" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head">
+        <strong>Pong Duel Lab Version History</strong>
+        <button id="closeVersions">Close</button>
+      </div>
+      <div id="versionsList"></div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const APP_FILE = 'pong_duel.html';
+  const APP_VERSION = '1.0.0';
+  const HISTORY_FILE = 'pong_duel.versions.json';
+  const EMBEDDED_HISTORY = {
+    latest: '1.0.0',
+    versions: [
+      {
+        version: '1.0.0',
+        label: 'Initial head-to-head arena',
+        appFile: 'pong_duel.html',
+        changes: [
+          'Added a new arena app where the evolution agent and RL agent can train independently and then play each other directly.',
+          'Added duel evaluation, live watch mode, shared score summaries, and a duel margin chart.',
+          'Added initial version-history wiring and dashboard/README discoverability support.'
+        ]
+      }
+    ]
+  };
+
+  const canvas = document.getElementById('game');
+  const duelChart = document.getElementById('duelChart');
+  const stats = document.getElementById('stats');
+  const logBox = document.getElementById('log');
+  const speedControl = document.getElementById('speedControl');
+  const speedValue = document.getElementById('speedValue');
+  const visualizeEval = document.getElementById('visualizeEval');
+
+  function setupHiDPICanvas(el) {
+    const cssW = Number(el.getAttribute('width'));
+    const cssH = Number(el.getAttribute('height'));
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    el.style.maxWidth = `${cssW}px`;
+    el.style.width = '100%';
+    el.style.height = 'auto';
+    el.width = Math.floor(cssW * dpr);
+    el.height = Math.floor(cssH * dpr);
+    const ctx = el.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { ctx, width: cssW, height: cssH };
+  }
+
+  const game = setupHiDPICanvas(canvas);
+  const duelChartCanvas = setupHiDPICanvas(duelChart);
+  const ctx = game.ctx;
+
+  const W = game.width;
+  const H = game.height;
+  const PADDLE_H = 80;
+  const PADDLE_W = 12;
+  const BALL = 10;
+  const LEFT_X = 20;
+  const RIGHT_X = W - 20 - PADDLE_W;
+  const TARGET_SCORE = 5;
+  const MAX_DUEL_FRAMES = 2600;
+  const ACTIONS = [-1, 0, 1];
+
+  let playbackSpeed = 1;
+  let animId = null;
+  let flashTicks = 0;
+  let duelMatches = 0;
+  let evolutionWins = 0;
+  let rlWins = 0;
+  let ties = 0;
+  let lastDuelSummary = 'No duel played yet';
+
+  const duelHistory = [];
+
+  function logEvent(message) {
+    const ts = new Date().toLocaleTimeString();
+    const line = `[${ts}] ${message}`;
+    logBox.textContent = `${line}\n${logBox.textContent}`.split('\n').slice(0, 120).join('\n');
+  }
+
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+  function randn() { return (Math.random() * 2 - 1) + (Math.random() * 2 - 1); }
+  function tanh(x) { return Math.tanh(x); }
+
+  // Evolution core.
+  const POP = 60;
+  const ELITE = 8;
+  const MUTATION = 0.18;
+  const MATCHES_PER_BOT = 5;
+  let evolutionGeneration = 0;
+  let bestFitnessEver = -Infinity;
+  let bestEvolutionBrain = null;
+
+  function makeBrain() {
+    return {
+      w1: Array.from({ length: 6 }, () => Array.from({ length: 5 }, () => randn() * 0.6)),
+      b1: Array.from({ length: 6 }, () => randn() * 0.3),
+      w2: Array.from({ length: 1 }, () => Array.from({ length: 6 }, () => randn() * 0.6)),
+      b2: [randn() * 0.3]
+    };
+  }
+
+  function cloneBrain(brain) {
+    return {
+      w1: brain.w1.map((row) => row.slice()),
+      b1: brain.b1.slice(),
+      w2: brain.w2.map((row) => row.slice()),
+      b2: brain.b2.slice()
+    };
+  }
+
+  function mutateBrain(brain) {
+    const out = cloneBrain(brain);
+    for (const row of out.w1) for (let i = 0; i < row.length; i++) if (Math.random() < MUTATION) row[i] += randn() * 0.25;
+    for (let i = 0; i < out.b1.length; i++) if (Math.random() < MUTATION) out.b1[i] += randn() * 0.25;
+    for (const row of out.w2) for (let i = 0; i < row.length; i++) if (Math.random() < MUTATION) row[i] += randn() * 0.25;
+    for (let i = 0; i < out.b2.length; i++) if (Math.random() < MUTATION) out.b2[i] += randn() * 0.25;
+    return out;
+  }
+
+  function forward(brain, input) {
+    const hidden = brain.w1.map((row, i) => tanh(row.reduce((s, w, j) => s + w * input[j], brain.b1[i])));
+    return tanh(brain.w2[0].reduce((s, w, j) => s + w * hidden[j], brain.b2[0]));
+  }
+
+  function makePopulation() {
+    return Array.from({ length: POP }, () => ({ brain: makeBrain(), fitness: 0 }));
+  }
+  let evolutionPopulation = makePopulation();
+
+  function scriptedOpponentStep(y, ballY) {
+    const target = ballY - PADDLE_H / 2;
+    return clamp(y + clamp(target - y, -4.4, 4.4), 0, H - PADDLE_H);
+  }
+
+  function simulateEvolutionPractice(brain, maxFrames = 1800) {
+    let playerY = H / 2 - PADDLE_H / 2;
+    let aiY = H / 2 - PADDLE_H / 2;
+    let ballX = W / 2;
+    let ballY = H / 2;
+    let vx = (Math.random() < 0.5 ? -1 : 1) * (4 + Math.random() * 2);
+    let vy = (Math.random() * 2 - 1) * 3;
+    let fitness = 0;
+    let returned = 0;
+    let points = 0;
+    let conceded = 0;
+
+    for (let frame = 0; frame < maxFrames; frame++) {
+      playerY = scriptedOpponentStep(playerY, ballY);
+      const input = [ballX / W, ballY / H, vx / 6, vy / 6, aiY / (H - PADDLE_H)];
+      aiY = clamp(aiY + forward(brain, input) * 5.2, 0, H - PADDLE_H);
+      ballX += vx;
+      ballY += vy;
+
+      if (ballY <= 0 || ballY >= H - BALL) { vy *= -1; ballY = clamp(ballY, 0, H - BALL); }
+      if (ballX <= LEFT_X + PADDLE_W && ballY + BALL >= playerY && ballY <= playerY + PADDLE_H && vx < 0) {
+        ballX = LEFT_X + PADDLE_W; vx *= -1; vy += ((ballY + BALL / 2) - (playerY + PADDLE_H / 2)) * 0.05;
+      }
+      if (ballX + BALL >= RIGHT_X && ballY + BALL >= aiY && ballY <= aiY + PADDLE_H && vx > 0) {
+        ballX = RIGHT_X - BALL; vx *= -1; vy += ((ballY + BALL / 2) - (aiY + PADDLE_H / 2)) * 0.05; fitness += 4; returned++;
+      }
+      if (ballX < 0) {
+        fitness += 25; points++; ballX = W / 2; ballY = H / 2; vx = 4 + Math.random() * 2; vy = (Math.random() * 2 - 1) * 3;
+      } else if (ballX > W) {
+        fitness -= 35; conceded++; ballX = W / 2; ballY = H / 2; vx = -(4 + Math.random() * 2); vy = (Math.random() * 2 - 1) * 3;
+      }
+      const centerAi = aiY + PADDLE_H / 2;
+      const centerBall = ballY + BALL / 2;
+      fitness += 0.03 * (1 - Math.min(1, Math.abs(centerAi - centerBall) / (H / 2)));
+    }
+    return { fitness, returned, points, conceded };
+  }
+
+  function evolveOneGeneration() {
+    let bestReturned = 0, bestPoints = 0, bestConceded = 0, avgFitness = 0;
+    for (const member of evolutionPopulation) {
+      let totalFitness = 0, totalReturned = 0, totalPoints = 0, totalConceded = 0;
+      for (let i = 0; i < MATCHES_PER_BOT; i++) {
+        const r = simulateEvolutionPractice(member.brain);
+        totalFitness += r.fitness;
+        totalReturned += r.returned;
+        totalPoints += r.points;
+        totalConceded += r.conceded;
+      }
+      member.fitness = totalFitness / MATCHES_PER_BOT;
+      member.avgReturned = totalReturned / MATCHES_PER_BOT;
+      member.avgPoints = totalPoints / MATCHES_PER_BOT;
+      member.avgConceded = totalConceded / MATCHES_PER_BOT;
+      avgFitness += member.fitness;
+    }
+    evolutionPopulation.sort((a, b) => b.fitness - a.fitness);
+    evolutionGeneration++;
+    const best = evolutionPopulation[0];
+    bestReturned = best.avgReturned;
+    bestPoints = best.avgPoints;
+    bestConceded = best.avgConceded;
+    avgFitness /= evolutionPopulation.length;
+    if (best.fitness > bestFitnessEver) {
+      bestFitnessEver = best.fitness;
+      bestEvolutionBrain = cloneBrain(best.brain);
+    }
+    const next = evolutionPopulation.slice(0, ELITE).map((m) => ({ brain: cloneBrain(m.brain), fitness: 0 }));
+    while (next.length < POP) {
+      const parent = evolutionPopulation[Math.floor(Math.random() * ELITE)].brain;
+      next.push({ brain: mutateBrain(parent), fitness: 0 });
+    }
+    evolutionPopulation = next;
+    logEvent(`Evolution gen ${evolutionGeneration}: best=${best.fitness.toFixed(2)} avg=${avgFitness.toFixed(2)} points=${bestPoints.toFixed(2)} conceded=${bestConceded.toFixed(2)} returns=${bestReturned.toFixed(2)}`);
+  }
+
+  // RL core.
+  const ALPHA = 0.16;
+  const GAMMA = 0.96;
+  const EPSILON_MIN = 0.05;
+  const EPSILON_DECAY = 0.992;
+  const WATCH_EPSILON = 0.01;
+  const MAX_RL_FRAMES = 2200;
+  let rlEpisode = 0;
+  let rlTotalUpdates = 0;
+  let rlEpsilon = 1;
+  let rlBestRewardEver = -Infinity;
+  let rlBestSnapshot = null;
+
+  function createFreshAgent() {
+    return { qTable: new Map(), stateVisits: new Map() };
+  }
+  let rlAgent = createFreshAgent();
+
+  function cloneMap(map) { return new Map(Array.from(map.entries())); }
+  function captureRlSnapshot() {
+    return { qTable: cloneMap(rlAgent.qTable), stateVisits: cloneMap(rlAgent.stateVisits), epsilon: rlEpsilon, totalUpdates: rlTotalUpdates };
+  }
+  function stateKey(parts) { return parts.join('|'); }
+  function getQValues(key, table = rlAgent.qTable) {
+    if (!table.has(key)) table.set(key, [0, 0, 0]);
+    return table.get(key);
+  }
+
+  function discretizeState(ballX, ballY, vx, vy, aiY, playerY) {
+    const bx = clamp(Math.floor((ballX / W) * 12), 0, 11);
+    const by = clamp(Math.floor((ballY / H) * 12), 0, 11);
+    const dx = vx < -1 ? 0 : vx > 1 ? 2 : 1;
+    const dy = vy < -1 ? 0 : vy > 1 ? 2 : 1;
+    const aiBin = clamp(Math.floor((aiY / (H - PADDLE_H)) * 10), 0, 9);
+    const rel = clamp(Math.floor((((ballY - (aiY + PADDLE_H / 2)) / H) + 0.5) * 10), 0, 9);
+    const opp = clamp(Math.floor((playerY / (H - PADDLE_H)) * 8), 0, 7);
+    return stateKey([bx, by, dx, dy, aiBin, rel, opp]);
+  }
+
+  function chooseAction(key, epsilonValue, qTable = rlAgent.qTable) {
+    const qValues = qTable.has(key) ? qTable.get(key) : [0, 0, 0];
+    if (Math.random() < epsilonValue) return Math.floor(Math.random() * ACTIONS.length);
+    let bestIndex = 0;
+    for (let i = 1; i < qValues.length; i++) if (qValues[i] > qValues[bestIndex]) bestIndex = i;
+    return bestIndex;
+  }
+
+  function applyQUpdate(state, actionIndex, rewardValue, nextState) {
+    const qValues = getQValues(state);
+    const nextValues = getQValues(nextState);
+    const tdTarget = rewardValue + GAMMA * Math.max(...nextValues);
+    qValues[actionIndex] += ALPHA * (tdTarget - qValues[actionIndex]);
+    rlTotalUpdates++;
+  }
+
+  function runRlPracticeEpisode() {
+    let playerY = H / 2 - PADDLE_H / 2;
+    let aiY = H / 2 - PADDLE_H / 2;
+    let ballX = W / 2;
+    let ballY = H / 2;
+    let vx = (Math.random() < 0.5 ? -1 : 1) * (4 + Math.random() * 1.3);
+    let vy = (Math.random() * 2 - 1) * 2.5;
+    let rewardValue = 0;
+    let playerScore = 0;
+    let aiScore = 0;
+
+    for (let frame = 0; frame < MAX_RL_FRAMES; frame++) {
+      playerY = scriptedOpponentStep(playerY, ballY);
+      const state = discretizeState(ballX, ballY, vx, vy, aiY, playerY);
+      const actionIndex = chooseAction(state, rlEpsilon);
+      rlAgent.stateVisits.set(state, (rlAgent.stateVisits.get(state) || 0) + 1);
+      aiY = clamp(aiY + ACTIONS[actionIndex] * 6.2, 0, H - PADDLE_H);
+      ballX += vx;
+      ballY += vy;
+      let stepReward = -0.02;
+
+      if (ballY <= 0 || ballY >= H - BALL) { vy *= -1; ballY = clamp(ballY, 0, H - BALL); }
+      if (ballX <= LEFT_X + PADDLE_W && ballY + BALL >= playerY && ballY <= playerY + PADDLE_H && vx < 0) {
+        ballX = LEFT_X + PADDLE_W; vx *= -1; vy += ((ballY + BALL / 2) - (playerY + PADDLE_H / 2)) * 0.05;
+      }
+      if (ballX + BALL >= RIGHT_X && ballY + BALL >= aiY && ballY <= aiY + PADDLE_H && vx > 0) {
+        ballX = RIGHT_X - BALL; vx *= -1; vy += ((ballY + BALL / 2) - (aiY + PADDLE_H / 2)) * 0.05; stepReward += 1.2;
+      }
+      const distancePenalty = Math.abs((aiY + PADDLE_H / 2) - (ballY + BALL / 2)) / (H / 2);
+      stepReward += 0.08 * (1 - Math.min(1, distancePenalty));
+      if (ballX < 0) {
+        aiScore++; stepReward += 6; ballX = W / 2; ballY = H / 2; vx = 4 + Math.random() * 1.3; vy = (Math.random() * 2 - 1) * 2.5;
+      } else if (ballX > W) {
+        playerScore++; stepReward -= 7; ballX = W / 2; ballY = H / 2; vx = -(4 + Math.random() * 1.3); vy = (Math.random() * 2 - 1) * 2.5;
+      }
+      const nextState = discretizeState(ballX, ballY, vx, vy, aiY, playerY);
+      applyQUpdate(state, actionIndex, stepReward, nextState);
+      rewardValue += stepReward;
+      if (playerScore >= TARGET_SCORE || aiScore >= TARGET_SCORE) break;
+    }
+
+    rlEpisode++;
+    rlEpsilon = Math.max(EPSILON_MIN, rlEpsilon * EPSILON_DECAY);
+    if (rewardValue > rlBestRewardEver) {
+      rlBestRewardEver = rewardValue;
+      rlBestSnapshot = captureRlSnapshot();
+    }
+    logEvent(`RL ep ${rlEpisode}: reward=${rewardValue.toFixed(2)} epsilon=${rlEpsilon.toFixed(3)} score ${aiScore}-${playerScore} updates=${rlTotalUpdates}`);
+  }
+
+  function getEvolutionMove(leftY, ballX, ballY, vx, vy) {
+    const brain = bestEvolutionBrain || evolutionPopulation[0].brain;
+    const mirroredX = W - ballX;
+    const mirroredVx = -vx;
+    const input = [mirroredX / W, ballY / H, mirroredVx / 6, vy / 6, leftY / (H - PADDLE_H)];
+    return forward(brain, input) * 5.2;
+  }
+
+  function getRlMove(rightY, leftY, ballX, ballY, vx, vy) {
+    const snapshot = rlBestSnapshot || captureRlSnapshot();
+    const state = discretizeState(ballX, ballY, vx, vy, rightY, leftY);
+    const actionIndex = chooseAction(state, WATCH_EPSILON, snapshot.qTable);
+    return ACTIONS[actionIndex] * 6.2;
+  }
+
+  function drawAxes(c, minY, maxY, label) {
+    c.ctx.strokeStyle = '#9ca3af';
+    c.ctx.beginPath();
+    c.ctx.moveTo(42, 10);
+    c.ctx.lineTo(42, c.height - 24);
+    c.ctx.lineTo(c.width - 10, c.height - 24);
+    c.ctx.stroke();
+    c.ctx.fillStyle = '#374151';
+    c.ctx.font = '12px Arial';
+    c.ctx.fillText(maxY.toFixed(1), 4, 16);
+    c.ctx.fillText(minY.toFixed(1), 4, c.height - 28);
+    if (duelHistory.length > 1) {
+      c.ctx.fillText(`Match 1`, 44, c.height - 8);
+      c.ctx.fillText(`Match ${duelHistory[duelHistory.length - 1].match}`, c.width - 78, c.height - 8);
+    }
+    c.ctx.fillText(label, Math.floor(c.width / 2) - 40, c.height - 8);
+  }
+
+  function drawSeries(c, arr, accessor, color, minY, rangeY) {
+    c.ctx.strokeStyle = color;
+    c.ctx.lineWidth = 2;
+    c.ctx.beginPath();
+    arr.forEach((item, i) => {
+      const x = 42 + i * ((c.width - 52) / Math.max(1, arr.length - 1));
+      const y = (c.height - 24) - ((accessor(item) - minY) / rangeY) * (c.height - 34);
+      if (i === 0) c.ctx.moveTo(x, y); else c.ctx.lineTo(x, y);
+    });
+    c.ctx.stroke();
+  }
+
+  function drawDuelChart() {
+    const c = duelChartCanvas;
+    c.ctx.clearRect(0, 0, c.width, c.height);
+    c.ctx.fillStyle = '#f9fafb';
+    c.ctx.fillRect(0, 0, c.width, c.height);
+    if (!duelHistory.length) {
+      c.ctx.fillStyle = '#374151';
+      c.ctx.fillText('Duel score margin (Evolution score - RL score) per completed match.', 10, 20);
+      return;
+    }
+    const minY = Math.min(...duelHistory.map((d) => d.margin));
+    const maxY = Math.max(...duelHistory.map((d) => d.margin));
+    const rangeY = Math.max(1, maxY - minY);
+    drawAxes(c, minY, maxY, 'duel match axis');
+    drawSeries(c, duelHistory, (d) => d.margin, '#7c3aed', minY, rangeY);
+  }
+
+  function drawScene(leftY, rightY, ballX, ballY, evoScore, rlScore, status) {
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(LEFT_X, leftY, PADDLE_W, PADDLE_H);
+    ctx.fillStyle = '#2563eb';
+    ctx.fillRect(RIGHT_X, rightY, PADDLE_W, PADDLE_H);
+    ctx.fillStyle = '#111827';
+    ctx.fillRect(ballX, ballY, BALL, BALL);
+    if (flashTicks > 0) {
+      ctx.fillStyle = 'rgba(124, 58, 237, 0.12)';
+      ctx.fillRect(0, 0, W, H);
+      flashTicks--;
+    }
+    ctx.setLineDash([6, 6]);
+    ctx.beginPath();
+    ctx.moveTo(W / 2, 0);
+    ctx.lineTo(W / 2, H);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#111827';
+    ctx.fillText(`Evolution ${evoScore}  RL ${rlScore}`, 10, 16);
+    ctx.fillText(status, 10, 32);
+  }
+
+  function recordDuelResult(result) {
+    duelMatches++;
+    if (result.evolutionScore > result.rlScore) evolutionWins++;
+    else if (result.rlScore > result.evolutionScore) rlWins++;
+    else ties++;
+    lastDuelSummary = `Last duel: Evolution ${result.evolutionScore} - RL ${result.rlScore} (${result.winner})`;
+    duelHistory.push({ match: duelMatches, margin: result.evolutionScore - result.rlScore });
+    if (duelHistory.length > 160) duelHistory.shift();
+    drawDuelChart();
+    updateStats(`Completed duel match ${duelMatches}.`);
+  }
+
+  async function playDuelMatch({ render = false } = {}) {
+    let leftY = H / 2 - PADDLE_H / 2;
+    let rightY = H / 2 - PADDLE_H / 2;
+    let ballX = W / 2;
+    let ballY = H / 2;
+    let vx = (Math.random() < 0.5 ? -1 : 1) * (4 + Math.random() * 1.4);
+    let vy = (Math.random() * 2 - 1) * 2.8;
+    let evolutionScore = 0;
+    let rlScore = 0;
+
+    for (let frame = 0; frame < MAX_DUEL_FRAMES; frame++) {
+      leftY = clamp(leftY + getEvolutionMove(leftY, ballX, ballY, vx, vy), 0, H - PADDLE_H);
+      rightY = clamp(rightY + getRlMove(rightY, leftY, ballX, ballY, vx, vy), 0, H - PADDLE_H);
+      ballX += vx;
+      ballY += vy;
+
+      if (ballY <= 0 || ballY >= H - BALL) { vy *= -1; ballY = clamp(ballY, 0, H - BALL); }
+      if (ballX <= LEFT_X + PADDLE_W && ballY + BALL >= leftY && ballY <= leftY + PADDLE_H && vx < 0) {
+        ballX = LEFT_X + PADDLE_W; vx *= -1; vy += ((ballY + BALL / 2) - (leftY + PADDLE_H / 2)) * 0.05;
+      }
+      if (ballX + BALL >= RIGHT_X && ballY + BALL >= rightY && ballY <= rightY + PADDLE_H && vx > 0) {
+        ballX = RIGHT_X - BALL; vx *= -1; vy += ((ballY + BALL / 2) - (rightY + PADDLE_H / 2)) * 0.05;
+      }
+      if (ballX < 0) {
+        rlScore++; flashTicks = 2; ballX = W / 2; ballY = H / 2; vx = 4 + Math.random() * 1.4; vy = (Math.random() * 2 - 1) * 2.8;
+      } else if (ballX > W) {
+        evolutionScore++; flashTicks = 2; ballX = W / 2; ballY = H / 2; vx = -(4 + Math.random() * 1.4); vy = (Math.random() * 2 - 1) * 2.8;
+      }
+
+      if (render && frame % Math.max(1, Math.floor(4 / Math.max(0.25, playbackSpeed))) === 0) {
+        drawScene(leftY, rightY, ballX, ballY, evolutionScore, rlScore, 'Live duel');
+        if (visualizeEval.checked) await new Promise((resolve) => setTimeout(resolve, Math.max(8, 18 / Math.max(0.25, playbackSpeed))));
+      }
+      if (evolutionScore >= TARGET_SCORE || rlScore >= TARGET_SCORE) break;
+    }
+
+    const winner = evolutionScore === rlScore ? 'tie' : evolutionScore > rlScore ? 'Evolution wins' : 'RL wins';
+    return { evolutionScore, rlScore, winner };
+  }
+
+  function stopAnim() {
+    if (animId !== null) cancelAnimationFrame(animId);
+    animId = null;
+  }
+
+  function watchDuel() {
+    stopAnim();
+    let leftY = H / 2 - PADDLE_H / 2;
+    let rightY = H / 2 - PADDLE_H / 2;
+    let ballX = W / 2;
+    let ballY = H / 2;
+    let vx = (Math.random() < 0.5 ? -1 : 1) * (4 + Math.random() * 1.4);
+    let vy = (Math.random() * 2 - 1) * 2.8;
+    let evolutionScore = 0;
+    let rlScore = 0;
+    let stepBudget = 0;
+    let lastFrameTime = performance.now();
+    let lastStatsPaint = 0;
+
+    function stepOneTick() {
+      leftY = clamp(leftY + getEvolutionMove(leftY, ballX, ballY, vx, vy), 0, H - PADDLE_H);
+      rightY = clamp(rightY + getRlMove(rightY, leftY, ballX, ballY, vx, vy), 0, H - PADDLE_H);
+      ballX += vx;
+      ballY += vy;
+      if (ballY <= 0 || ballY >= H - BALL) { vy *= -1; ballY = clamp(ballY, 0, H - BALL); }
+      if (ballX <= LEFT_X + PADDLE_W && ballY + BALL >= leftY && ballY <= leftY + PADDLE_H && vx < 0) {
+        ballX = LEFT_X + PADDLE_W; vx *= -1; vy += ((ballY + BALL / 2) - (leftY + PADDLE_H / 2)) * 0.05;
+      }
+      if (ballX + BALL >= RIGHT_X && ballY + BALL >= rightY && ballY <= rightY + PADDLE_H && vx > 0) {
+        ballX = RIGHT_X - BALL; vx *= -1; vy += ((ballY + BALL / 2) - (rightY + PADDLE_H / 2)) * 0.05;
+      }
+      if (ballX < 0) {
+        rlScore++; flashTicks = 2; ballX = W / 2; ballY = H / 2; vx = 4 + Math.random() * 1.4; vy = (Math.random() * 2 - 1) * 2.8;
+      } else if (ballX > W) {
+        evolutionScore++; flashTicks = 2; ballX = W / 2; ballY = H / 2; vx = -(4 + Math.random() * 1.4); vy = (Math.random() * 2 - 1) * 2.8;
+      }
+      if (evolutionScore >= TARGET_SCORE || rlScore >= TARGET_SCORE) {
+        const winner = evolutionScore > rlScore ? 'Evolution wins' : 'RL wins';
+        recordDuelResult({ evolutionScore, rlScore, winner });
+        evolutionScore = 0;
+        rlScore = 0;
+      }
+    }
+
+    function loop(now = performance.now()) {
+      const dt = Math.min(2.5, Math.max(0.5, (now - lastFrameTime) / (1000 / 60)));
+      lastFrameTime = now;
+      stepBudget += Math.max(0.25, playbackSpeed) * dt;
+      let renderedSteps = 0;
+      while (stepBudget >= 1 && renderedSteps < 3) {
+        stepOneTick();
+        stepBudget -= 1;
+        renderedSteps++;
+      }
+      drawScene(leftY, rightY, ballX, ballY, evolutionScore, rlScore, 'Watching duel');
+      if (now - lastStatsPaint >= 180) {
+        updateStats('Watching head-to-head duel.');
+        lastStatsPaint = now;
+      }
+      animId = requestAnimationFrame(loop);
+    }
+
+    loop();
+    logEvent('Head-to-head watch mode started.');
+  }
+
+  function updateStats(extra = '') {
+    stats.textContent =
+`Evolution training:\n- Generation: ${evolutionGeneration}\n- Best fitness ever: ${bestFitnessEver === -Infinity ? 'n/a' : bestFitnessEver.toFixed(2)}\n- Best brain ready: ${bestEvolutionBrain ? 'yes' : 'baseline only'}\n\nRL training:\n- Episode: ${rlEpisode}\n- Best reward ever: ${rlBestRewardEver === -Infinity ? 'n/a' : rlBestRewardEver.toFixed(2)}\n- Epsilon: ${rlEpsilon.toFixed(3)}\n- Total Q updates: ${rlTotalUpdates}\n\nHead-to-head duel:\n- Matches completed: ${duelMatches}\n- Evolution wins: ${evolutionWins}\n- RL wins: ${rlWins}\n- Ties: ${ties}\n- ${lastDuelSummary}\n\nInterpretation:\n- Evolution learned as a population against a scripted practice paddle, then its best controller is mirrored onto the left side.\n- RL learned as a single right-side policy against its scripted practice paddle, then uses its learned Q-table directly in the duel.\n- This arena is not training both agents against each other live; it is evaluating how their separately trained policies perform head to head.\n\n${extra}`;
+  }
+
+  function resetAll() {
+    stopAnim();
+    evolutionPopulation = makePopulation();
+    evolutionGeneration = 0;
+    bestFitnessEver = -Infinity;
+    bestEvolutionBrain = null;
+    rlAgent = createFreshAgent();
+    rlEpisode = 0;
+    rlTotalUpdates = 0;
+    rlEpsilon = 1;
+    rlBestRewardEver = -Infinity;
+    rlBestSnapshot = null;
+    duelMatches = 0;
+    evolutionWins = 0;
+    rlWins = 0;
+    ties = 0;
+    flashTicks = 0;
+    lastDuelSummary = 'No duel played yet';
+    duelHistory.length = 0;
+    drawDuelChart();
+    ctx.clearRect(0, 0, W, H);
+    updateStats('Reset all agents and duel history.');
+    logEvent('Reset all agents and duel history.');
+  }
+
+  async function evaluateDuelBatch(count) {
+    stopAnim();
+    for (let i = 0; i < count; i++) {
+      const result = await playDuelMatch({ render: visualizeEval.checked });
+      recordDuelResult(result);
+      logEvent(`Duel ${duelMatches}: Evolution ${result.evolutionScore} - RL ${result.rlScore} (${result.winner})`);
+    }
+    updateStats(`Evaluated ${count} duel match(es).`);
+  }
+
+  function getRootPathPrefix() {
+    const p = window.location.pathname;
+    const appIdx = p.lastIndexOf(`/${APP_FILE}`);
+    if (appIdx !== -1) return p.slice(0, appIdx + 1);
+    const lastSlash = p.lastIndexOf('/');
+    return lastSlash === -1 ? '/' : p.slice(0, lastSlash + 1);
+  }
+  function getRootUrl() { return `${window.location.origin}${getRootPathPrefix()}`; }
+  function withBust(url) { return `${url}${url.includes('?') ? '&' : '?'}v=${Date.now()}`; }
+  function getCurrentAppFile() {
+    const prefix = getRootPathPrefix();
+    const path = window.location.pathname;
+    return path.startsWith(prefix) ? path.slice(prefix.length) : path.replace(/^\//, '');
+  }
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, (char) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[char] || char));
+  }
+  function renderVersionHistory(history) {
+    const container = document.getElementById('versionsList');
+    const current = getCurrentAppFile();
+    container.innerHTML = (history.versions || []).map((entry) => {
+      const active = entry.appFile === current ? ' active' : '';
+      return `
+        <div class="version-item${active}">
+          <h3>${escapeHtml(entry.version)} · ${escapeHtml(entry.label || '')}</h3>
+          <div><strong>File:</strong> <code>${escapeHtml(entry.appFile || '')}</code></div>
+          <ul>${(entry.changes || []).map((change) => `<li>${escapeHtml(change)}</li>`).join('')}</ul>
+        </div>
+      `;
+    }).join('');
+  }
+  async function loadVersionHistory() {
+    try {
+      const response = await fetch(withBust(`${getRootUrl()}${HISTORY_FILE}`), { cache: 'no-store' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      renderVersionHistory(await response.json());
+    } catch (error) {
+      renderVersionHistory(EMBEDDED_HISTORY);
+    }
+  }
+
+  document.getElementById('trainEvo1').onclick = () => { evolveOneGeneration(); updateStats('Trained Evolution +1 generation.'); };
+  document.getElementById('trainEvo10').onclick = () => { for (let i = 0; i < 10; i++) evolveOneGeneration(); updateStats('Trained Evolution +10 generations.'); };
+  document.getElementById('trainRl10').onclick = () => { for (let i = 0; i < 10; i++) runRlPracticeEpisode(); updateStats('Trained RL +10 episodes.'); };
+  document.getElementById('trainRl100').onclick = () => { for (let i = 0; i < 100; i++) runRlPracticeEpisode(); updateStats('Trained RL +100 episodes.'); };
+  document.getElementById('trainBoth').onclick = () => {
+    for (let i = 0; i < 5; i++) evolveOneGeneration();
+    for (let i = 0; i < 50; i++) runRlPracticeEpisode();
+    updateStats('Ran a bundled training pass for both agents.');
+  };
+  document.getElementById('evalDuel').onclick = () => evaluateDuelBatch(5);
+  document.getElementById('watchDuel').onclick = watchDuel;
+  document.getElementById('stopWatch').onclick = () => { stopAnim(); updateStats('Animation stopped.'); logEvent('Stopped duel watch mode.'); };
+  document.getElementById('resetAll').onclick = resetAll;
+
+  speedControl.addEventListener('input', () => {
+    playbackSpeed = Number(speedControl.value) || 1;
+    speedValue.textContent = `${playbackSpeed.toFixed(2)}x`;
+    updateStats('Updated playback speed.');
+  });
+
+  document.getElementById('appVersion').textContent = APP_VERSION;
+  const versionsModal = document.getElementById('versionsModal');
+  document.getElementById('openVersions').addEventListener('click', async () => {
+    await loadVersionHistory();
+    versionsModal.classList.add('show');
+    versionsModal.setAttribute('aria-hidden', 'false');
+  });
+  document.getElementById('closeVersions').addEventListener('click', () => {
+    versionsModal.classList.remove('show');
+    versionsModal.setAttribute('aria-hidden', 'true');
+  });
+  versionsModal.addEventListener('click', (event) => {
+    if (event.target === versionsModal) {
+      versionsModal.classList.remove('show');
+      versionsModal.setAttribute('aria-hidden', 'true');
+    }
+  });
+
+  drawDuelChart();
+  updateStats('Ready. Train each agent, then evaluate or watch the duel.');
+  logEvent('Initialized Pong Duel Lab.');
+})();
+</script>
+</body>
+</html>

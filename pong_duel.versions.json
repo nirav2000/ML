@@ -1,0 +1,15 @@
+{
+  "latest": "1.0.0",
+  "versions": [
+    {
+      "version": "1.0.0",
+      "label": "Initial head-to-head arena",
+      "appFile": "pong_duel.html",
+      "changes": [
+        "Added a new arena app where the evolution agent and RL agent can train independently and then play each other directly.",
+        "Added duel evaluation, live watch mode, shared score summaries, and a duel margin chart.",
+        "Added initial version-history wiring and dashboard/README discoverability support."
+      ]
+    }
+  ]
+}

@@ -8,6 +8,7 @@ This repository contains interactive browser-based experiments focused on machin
 - `pong_evolution.html` — evolutionary Pong simulation.
 - `pong_RL/pong_RL.html` — reinforcement-learning Pong simulation.
 - `pong_compare.html` — side-by-side comparison lab for the evolution and RL Pong apps.
+- `pong_duel.html` — head-to-head arena where the trained evolution and RL agents can play each other directly.
 
 ## Pong apps
 
@@ -43,6 +44,7 @@ That differs from neuroevolution because reinforcement learning usually trains o
 - [Open Pong Evolution](./pong_evolution.html)
 - [Open Pong RL](./pong_RL/pong_RL.html)
 - [Open the new Pong Compare Lab](./pong_compare.html)
+- [Open the Pong Duel Lab](./pong_duel.html)
 - [Open the repo dashboard](./index.html)
 - [Open the reward/episode-based learning example currently in the repo (`ML101.html`)](./ML101.html)
 
@@ -67,3 +69,10 @@ As more apps are added, they can be listed on `index.html` with:
 The compare lab now also includes a shared side-by-side results panel that pulls headline metrics out of both embedded apps, auto-aligns the visible gameplay bands, and links vertical scrolling between the two embedded views so they stay aligned while you inspect them. The originating apps were also updated to behave more smoothly in watch mode by using delta-time-aware animation, limiting background training work per frame, and throttling heavy stats-panel rewrites.
 
 Because the compare lab reuses the original apps inside same-origin iframes, you can still use all native controls inside each panel when you want app-specific behavior, but the top-level page makes quick A/B comparisons much easier.
+
+
+## Pong duel lab
+
+`pong_duel.html` is a dedicated arena app where the best evolved controller and the learned RL policy can train separately against their usual scripted practice opponent and then play each other directly in one shared Pong match.
+
+It includes quick training controls for each side, duel evaluation batches, a live watch mode, and a simple duel-margin chart so you can track whether Evolution or RL is winning more often across repeated matches.
