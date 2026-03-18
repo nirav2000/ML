@@ -1,10 +1,20 @@
 {
-  "latest": "1.0.1",
+  "latest": "1.1.0",
   "versions": [
+    {
+      "version": "1.1.0",
+      "label": "Checkpoint persistence + clearer RL comparisons",
+      "appFile": "pong_RL/pong_RL.html",
+      "changes": [
+        "Added RL-specific local checkpoint persistence for settings, learning progress, and the learned Q-table.",
+        "Expanded the learning chart and stats panel to show stored checkpoint status, value estimates, and visited-state progress.",
+        "Archived the previous current build as pong_RL/versions/1.0.1/pong_RL.html."
+      ]
+    },
     {
       "version": "1.0.1",
       "label": "Initial standalone RL comparison app",
-      "appFile": "pong_RL/pong_RL.html",
+      "appFile": "pong_RL/versions/1.0.1/pong_RL.html",
       "changes": [
         "Added a standalone Pong RL app that mirrors the Pong Evolution layout for side-by-side comparison.",
         "Replaced neuroevolution with tabular Q-learning over discretized Pong state and action values.",

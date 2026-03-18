@@ -84,7 +84,7 @@
   </div>
 
   <div class="footer">
-    Version <span id="appVersion">1.1.0</span> · <span class="version-link" id="openVersions">View changelog</span>
+    Version <span id="appVersion">1.0.1</span> · <span class="version-link" id="openVersions">View changelog</span>
   </div>
 
   <div class="modal" id="versionsModal" aria-hidden="true">
@@ -100,23 +100,11 @@
 <script>
 (() => {
   const APP_FILE = 'pong_RL/pong_RL.html';
-  const APP_VERSION = '1.1.0';
+  const APP_VERSION = '1.0.1';
   const HISTORY_FILE = 'pong_RL/pong_RL.versions.json';
-  const SETTINGS_STORAGE_KEY = 'pong_RL.settings.v1';
-  const CHECKPOINT_STORAGE_KEY = 'pong_RL.checkpoint.v1';
   const EMBEDDED_HISTORY = {
-    latest: '1.1.0',
+    latest: '1.0.1',
     versions: [
-      {
-        version: '1.1.0',
-        label: 'Checkpoint persistence + clearer RL comparisons',
-        appFile: 'pong_RL/pong_RL.html',
-        changes: [
-          'Added RL-specific local checkpoint persistence for settings, learning progress, and the learned Q-table.',
-          'Expanded the learning chart and stats panel to show stored checkpoint status, value estimates, and visited-state progress.',
-          'Archived the previous current build as pong_RL/versions/1.0.1/pong_RL.html.'
-        ]
-      },
       {
         version: '1.0.1',
         label: 'Initial standalone RL comparison app',
@@ -235,89 +223,6 @@
       epsilon,
       totalPolicyUpdates
     };
-  }
-
-  let lastCheckpointLabel = 'No saved checkpoint yet';
-
-  function serializeAgentState() {
-    return {
-      episode,
-      totalPolicyUpdates,
-      epsilon,
-      bestRewardEver,
-      history: trainingHistory.slice(-260),
-      qEntries: Array.from(agent.qTable.entries()),
-      visitEntries: Array.from(agent.stateVisits.entries())
-    };
-  }
-
-  function saveSettings() {
-    try {
-      const payload = {
-        playbackSpeed: Number(speedControl.value) || 1,
-        episodeRatePerSec: Number(episodeRate.value) || 0,
-        visualizeTraining: visualizeTraining.checked,
-        autoTrain: autoTrain.checked
-      };
-      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(payload));
-    } catch (err) {
-      console.warn('Unable to save Pong RL settings', err);
-    }
-  }
-
-  function saveCheckpoint(reason = 'manual') {
-    try {
-      const payload = {
-        version: APP_VERSION,
-        savedAt: new Date().toISOString(),
-        reason,
-        data: serializeAgentState()
-      };
-      localStorage.setItem(CHECKPOINT_STORAGE_KEY, JSON.stringify(payload));
-      lastCheckpointLabel = `Saved ${reason} checkpoint at ${new Date(payload.savedAt).toLocaleTimeString()}`;
-    } catch (err) {
-      lastCheckpointLabel = 'Checkpoint save unavailable in this browser context';
-      console.warn('Unable to save Pong RL checkpoint', err);
-    }
-  }
-
-  function restoreSettings() {
-    try {
-      const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
-      if (!raw) return;
-      const saved = JSON.parse(raw);
-      if (typeof saved.playbackSpeed === 'number') speedControl.value = String(saved.playbackSpeed);
-      if (typeof saved.episodeRatePerSec === 'number') episodeRate.value = String(saved.episodeRatePerSec);
-      if (typeof saved.visualizeTraining === 'boolean') visualizeTraining.checked = saved.visualizeTraining;
-      if (typeof saved.autoTrain === 'boolean') autoTrain.checked = saved.autoTrain;
-    } catch (err) {
-      console.warn('Unable to restore Pong RL settings', err);
-    }
-  }
-
-  function restoreCheckpoint() {
-    try {
-      const raw = localStorage.getItem(CHECKPOINT_STORAGE_KEY);
-      if (!raw) return false;
-      const saved = JSON.parse(raw);
-      const data = saved.data || {};
-      episode = Number(data.episode) || 0;
-      totalPolicyUpdates = Number(data.totalPolicyUpdates) || 0;
-      epsilon = typeof data.epsilon === 'number' ? data.epsilon : 1;
-      bestRewardEver = typeof data.bestRewardEver === 'number' ? data.bestRewardEver : -Infinity;
-      trainingHistory.length = 0;
-      for (const item of (data.history || []).slice(-260)) trainingHistory.push(item);
-      agent = {
-        qTable: new Map(data.qEntries || []),
-        stateVisits: new Map(data.visitEntries || [])
-      };
-      bestSnapshot = captureAgentSnapshot();
-      if (saved.savedAt) lastCheckpointLabel = `Loaded checkpoint from ${new Date(saved.savedAt).toLocaleString()}`;
-      return true;
-    } catch (err) {
-      console.warn('Unable to restore Pong RL checkpoint', err);
-      return false;
-    }
   }
 
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
@@ -575,7 +480,6 @@
         bestRewardEver = rewardValue;
         bestSnapshot = captureAgentSnapshot();
       }
-      if (episode === 1 || episode % 5 === 0) saveCheckpoint('auto');
       logEvent(`Ep ${episode}: ${describeEpisode()} | reward=${rewardValue.toFixed(2)} movingAvg=${movingReward.toFixed(2)} epsilon=${epsilon.toFixed(3)} updates+=${summary.updatesThisEpisode} score ${aiScore}-${playerScore}`);
       drawRewardChart();
       drawLearningChart();
@@ -603,7 +507,6 @@ Latest episode metrics:
 - Average max Q estimate: ${latest ? latest.avgMaxQ.toFixed(3) : 'n/a'}
 - Blue score / Red score: ${latest ? `${latest.aiScore} / ${latest.playerScore}` : 'n/a'}
 - Visited state count: ${agent.qTable.size}
-Checkpoint status: ${lastCheckpointLabel}
 Best episode reward ever: ${bestRewardEver === -Infinity ? 'n/a' : bestRewardEver.toFixed(2)}
 
 Learning logic:
@@ -780,8 +683,6 @@ ${extra}`;
     drawRewardChart();
     drawLearningChart();
     ctx.clearRect(0, 0, W, H);
-    try { localStorage.removeItem(CHECKPOINT_STORAGE_KEY); } catch (err) { console.warn('Unable to clear Pong RL checkpoint', err); }
-    lastCheckpointLabel = 'Checkpoint cleared after reset';
     updateStats('Agent reset.');
     logEvent('Agent reset.');
   };
@@ -789,30 +690,14 @@ ${extra}`;
   speedControl.addEventListener('input', () => {
     playbackSpeed = Number(speedControl.value) || 1;
     speedValue.textContent = `${playbackSpeed.toFixed(2)}x`;
-    saveSettings();
     updateStats('Updated playback speed.');
   });
   episodeRate.addEventListener('input', () => {
     episodeRatePerSec = Number(episodeRate.value) || 0;
     episodeRateValue.textContent = `${episodeRatePerSec.toFixed(0)} ep/s`;
-    saveSettings();
     updateStats('Updated episode rate.');
   });
 
-  visualizeTraining.addEventListener('change', () => {
-    saveSettings();
-    updateStats('Updated training visualization preference.');
-  });
-
-  autoTrain.addEventListener('change', () => {
-    saveSettings();
-    updateStats('Updated auto-train preference.');
-  });
-
-  restoreSettings();
-  const restoredCheckpoint = restoreCheckpoint();
-  playbackSpeed = Number(speedControl.value) || 1;
-  episodeRatePerSec = Number(episodeRate.value) || 0;
   speedValue.textContent = `${playbackSpeed.toFixed(2)}x`;
   episodeRateValue.textContent = `${episodeRatePerSec.toFixed(0)} ep/s`;
   document.getElementById('appVersion').textContent = APP_VERSION;
@@ -834,7 +719,7 @@ ${extra}`;
 
   drawRewardChart();
   drawLearningChart();
-  updateStats(restoredCheckpoint ? 'Restored an RL checkpoint from local storage.' : 'Ready. Train episodes, or watch continuously with optional auto-train.');
+  updateStats('Ready. Train episodes, or watch continuously with optional auto-train.');
   logEvent(`Initialized app. ${describeEpisode()}`);
 })();
 </script>
