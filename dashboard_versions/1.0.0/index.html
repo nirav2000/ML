@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <base href="../../" />
   <title>ML Repo Dashboard</title>
   <style>
     :root {
@@ -391,7 +392,7 @@
     }
   </style>
 </head>
-<body data-dashboard-version="1.2.0">
+<body data-dashboard-version="1.0.0">
   <main class="shell">
     <section class="hero">
       <div class="hero-grid">
@@ -459,20 +460,18 @@
     </section>
 
     <footer>
-      Built as a simple repo front door so visitors can discover the apps quickly, compare related experiences, and understand what they will learn before opening them.
+      Built as a simple repo front door so visitors can discover the apps quickly and understand what they will learn before opening them.
     </footer>
   </main>
 
   <script>
-    const previewBase = "./dashboard_brand/previews/";
-
     const appCatalog = [
       {
         name: "ML101",
         version: "v0.1.6",
         href: "./ML101.html",
         artLabel: "Snapshot",
-        image: `${previewBase}ml101.svg`,
+        image: createMl101Preview(),
         description:
           "A compact machine-learning playground focused on interactive, beginner-friendly experimentation directly in the browser.",
         expect:
@@ -490,10 +489,10 @@
       },
       {
         name: "Pong Evolution",
-        version: "v1.5.0",
+        version: "v1.4.1",
         href: "./pong_evolution.html",
         artLabel: "Illustrated preview",
-        image: `${previewBase}pong-evolution.svg`,
+        image: createPongPreview(),
         description:
           "An evolutionary JavaScript demo where pong agents improve through mutation, selection, and repeated simulation.",
         expect:
@@ -511,10 +510,10 @@
       },
       {
         name: "Pong RL",
-        version: "v1.2.0",
+        version: "v1.1.0",
         href: "./pong_RL/pong_RL.html",
         artLabel: "Illustrated preview",
-        image: `${previewBase}pong-rl.svg`,
+        image: createPongPreview(),
         description:
           "A browser RL demo where one Pong paddle learns from episode rewards using tabular Q-learning instead of neuroevolution.",
         expect:
@@ -528,27 +527,6 @@
           { label: "Launch Pong RL", href: "./pong_RL/pong_RL.html", primary: true },
           { label: "Changelog data", href: "./pong_RL/pong_RL.versions.json", primary: false },
           { label: "Archived versions", href: "./pong_RL/versions/", primary: false }
-        ]
-      },
-      {
-        name: "Pong Compare Lab",
-        version: "v1.3.0",
-        href: "./pong_compare.html",
-        artLabel: "Side-by-side preview",
-        image: `${previewBase}pong-compare.svg`,
-        description:
-          "A comparison shell that embeds Pong Evolution and Pong RL side by side and adds synchronized controls for quick experiments.",
-        expect:
-          "You can expect both original Pong apps on one screen, shared playback/training controls, and a faster way to compare generations versus episodes.",
-        learn: [
-          "How the same Pong task looks when optimized with neuroevolution versus reinforcement learning.",
-          "How synchronized controls make training differences easier to observe in real time.",
-          "How an app-level comparison layer can reuse existing browser demos without rewriting them."
-        ],
-        links: [
-          { label: "Launch Compare Lab", href: "./pong_compare.html", primary: true },
-          { label: "Changelog data", href: "./pong_compare.versions.json", primary: false },
-          { label: "Open dashboard", href: "./index.html", primary: false }
         ]
       }
     ];
@@ -619,6 +597,73 @@
       `).join("");
     }
 
+    function createMl101Preview() {
+      const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" role="img" aria-label="ML101 preview artwork">
+          <defs>
+            <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#eff5ff"/>
+              <stop offset="100%" stop-color="#d9f7ef"/>
+            </linearGradient>
+            <linearGradient id="card" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#ffffff"/>
+              <stop offset="100%" stop-color="#eef3ff"/>
+            </linearGradient>
+          </defs>
+          <rect width="800" height="500" rx="36" fill="url(#bg)"/>
+          <rect x="30" y="28" width="740" height="444" rx="26" fill="#0f1d33" opacity="0.08"/>
+          <rect x="52" y="46" width="696" height="400" rx="24" fill="url(#card)"/>
+          <rect x="82" y="84" width="190" height="320" rx="18" fill="#ffffff" stroke="#d4e3ff"/>
+          <rect x="302" y="84" width="416" height="182" rx="18" fill="#13284a"/>
+          <polyline points="330,210 380,172 430,190 485,132 540,156 596,112 648,138 690,100" fill="none" stroke="#78a6ff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="690" cy="100" r="9" fill="#5fe2c2"/>
+          <rect x="302" y="288" width="200" height="116" rx="18" fill="#ffffff" stroke="#d4e3ff"/>
+          <rect x="518" y="288" width="200" height="116" rx="18" fill="#ffffff" stroke="#d4e3ff"/>
+          <rect x="100" y="110" width="118" height="16" rx="8" fill="#bed1ff"/>
+          <rect x="100" y="148" width="144" height="14" rx="7" fill="#e5edff"/>
+          <rect x="100" y="180" width="144" height="14" rx="7" fill="#e5edff"/>
+          <rect x="100" y="212" width="124" height="14" rx="7" fill="#e5edff"/>
+          <rect x="100" y="260" width="130" height="38" rx="19" fill="#78a6ff"/>
+          <rect x="100" y="316" width="150" height="12" rx="6" fill="#e5edff"/>
+          <rect x="100" y="340" width="136" height="12" rx="6" fill="#e5edff"/>
+          <rect x="100" y="364" width="96" height="12" rx="6" fill="#e5edff"/>
+          <text x="82" y="72" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#17345d">ML101</text>
+          <text x="326" y="126" font-family="Arial, sans-serif" font-size="26" font-weight="700" fill="#ffffff">Interactive model behavior</text>
+          <text x="326" y="325" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#17345d">Experiment</text>
+          <text x="542" y="325" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#17345d">Learn</text>
+        </svg>`;
+      return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+    }
+
+    function createPongPreview() {
+      const svg = `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" role="img" aria-label="Pong Evolution preview artwork">
+          <defs>
+            <linearGradient id="bg2" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#07111f"/>
+              <stop offset="100%" stop-color="#14385b"/>
+            </linearGradient>
+          </defs>
+          <rect width="800" height="500" rx="36" fill="url(#bg2)"/>
+          <rect x="38" y="38" width="724" height="424" rx="28" fill="#08182c" stroke="#284b75"/>
+          <line x1="400" y1="70" x2="400" y2="430" stroke="#dce9ff" stroke-width="8" stroke-dasharray="14 18" opacity="0.9"/>
+          <rect x="86" y="154" width="18" height="110" rx="9" fill="#78a6ff"/>
+          <rect x="696" y="220" width="18" height="110" rx="9" fill="#5fe2c2"/>
+          <circle cx="430" cy="204" r="16" fill="#ffffff"/>
+          <path d="M494 112 C560 132, 598 184, 612 244" fill="none" stroke="#ffc76b" stroke-width="8" stroke-linecap="round"/>
+          <path d="M512 130 L494 112 L519 108" fill="none" stroke="#ffc76b" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+          <rect x="74" y="72" width="130" height="48" rx="18" fill="#102540" stroke="#284b75"/>
+          <rect x="596" y="72" width="130" height="48" rx="18" fill="#102540" stroke="#284b75"/>
+          <text x="106" y="104" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#dce9ff">12</text>
+          <text x="628" y="104" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#dce9ff">18</text>
+          <rect x="76" y="370" width="240" height="58" rx="18" fill="#0f2139" stroke="#284b75"/>
+          <rect x="338" y="370" width="386" height="58" rx="18" fill="#0f2139" stroke="#284b75"/>
+          <text x="96" y="405" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#5fe2c2">Generation 148</text>
+          <text x="358" y="405" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#dce9ff">Mutation · Selection · Improvement</text>
+          <text x="70" y="332" font-family="Arial, sans-serif" font-size="30" font-weight="700" fill="#ffffff">Pong Evolution</text>
+        </svg>`;
+      return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+    }
   </script>
   <script src="./dashboard_version_history.js"></script>
 </body>

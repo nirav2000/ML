@@ -1,0 +1,36 @@
+{
+  "app": "dashboard",
+  "current": "1.2.0",
+  "versions": [
+    {
+      "version": "1.2.0",
+      "label": "Compare lab + preview generator",
+      "appFile": "index.html",
+      "notes": [
+        "Added Pong Compare Lab to the dashboard catalog.",
+        "Moved dashboard previews into reusable brand assets under dashboard_brand/previews/.",
+        "Added reusable brand theme files and preview generation tooling."
+      ]
+    },
+    {
+      "version": "1.1.0",
+      "label": "Reusable brand theme + generated previews",
+      "appFile": "dashboard_versions/1.1.0/index.html",
+      "notes": [
+        "Introduced the reusable dashboard_brand theme package.",
+        "Switched dashboard cards to file-based preview assets.",
+        "Added preview generation manifest and workflow example."
+      ]
+    },
+    {
+      "version": "1.0.0",
+      "label": "Markdown-aware dashboard",
+      "appFile": "dashboard_versions/1.0.0/index.html",
+      "notes": [
+        "Added in-browser markdown viewing for dashboard-linked documentation.",
+        "Made hero stats data-driven from the app catalog.",
+        "Provided the first polished multi-app dashboard shell."
+      ]
+    }
+  ]
+}
