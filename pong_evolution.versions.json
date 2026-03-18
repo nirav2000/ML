@@ -1,10 +1,20 @@
 {
-  "latest": "1.4.0",
+  "latest": "1.4.1",
   "versions": [
+    {
+      "version": "1.4.1",
+      "label": "Generation explanation + archive refresh",
+      "appFile": "pong_evolution.html",
+      "changes": [
+        "Explained what a generation means in the UI and learning log.",
+        "Clarified the evaluate -> select elites -> mutate loop in the stats panel.",
+        "Archived v1.4.0 under versions/1.4.0/pong_evolution.html."
+      ]
+    },
     {
       "version": "1.4.0",
       "label": "HiDPI charts + axis + live evolution controls",
-      "appFile": "pong_evolution.html",
+      "appFile": "versions/1.4.0/pong_evolution.html",
       "changes": [
         "Added high-DPI chart rendering and generation axis labels.",
         "Added continuous watch with optional auto-train and step-generation controls.",

@@ -64,7 +64,6 @@
 
     <div class="right-pane">
       <div class="legend">
-        <div style="margin-bottom:8px;"><strong>What is a generation?</strong> One generation means the app tests the whole population, ranks them, keeps the best few, then mutates copies of those survivors to create the next population.</div>
         <div><span class="dot" style="background:#ef4444"></span>Red paddle: scripted opponent (fixed rule, no learning).</div>
         <div><span class="dot" style="background:#2563eb"></span>Blue paddle: learning AI (neural net evolved by generation).</div>
         <div><span class="dot" style="background:#0366d6"></span>Fitness chart blue: best fitness in generation.</div>
@@ -79,7 +78,7 @@
   </div>
 
   <div class="footer">
-    Version <span id="appVersion">1.4.1</span> · <span class="version-link" id="openVersions">View changelog</span>
+    Version <span id="appVersion">1.4.0</span> · <span class="version-link" id="openVersions">View changelog</span>
   </div>
 
   <div class="modal" id="versionsModal" aria-hidden="true">
@@ -95,24 +94,14 @@
 <script>
 (() => {
   const APP_FILE = "pong_evolution.html";
-  const APP_VERSION = "1.4.1";
+  const APP_VERSION = "1.4.0";
   const EMBEDDED_HISTORY = {
-    latest: "1.4.1",
+    latest: "1.4.0",
     versions: [
-      {
-        version: "1.4.1",
-        label: "Generation explanation + archive refresh",
-        appFile: "pong_evolution.html",
-        changes: [
-          "Explained what a generation means in the UI and learning log.",
-          "Clarified the evaluate -> select elites -> mutate loop in the stats panel.",
-          "Archived v1.4.0 under versions/1.4.0/pong_evolution.html."
-        ]
-      },
       {
         version: "1.4.0",
         label: "HiDPI charts + axis + live evolution controls",
-        appFile: "versions/1.4.0/pong_evolution.html",
+        appFile: "pong_evolution.html",
         changes: [
           "Added high-DPI chart rendering and generation axis labels.",
           "Added continuous watch with optional auto-train and step-generation controls.",
@@ -268,10 +257,6 @@
   let flashTicks = 0;
 
   const trainingHistory = []; // {gen, best, avg, points, conceded, returns}
-
-  function describeGeneration() {
-    return `A generation is one full learning cycle: evaluate ${POP} bots over ${MATCHES_PER_BOT} matches each, rank them by fitness, keep ${ELITE} elites, then fill the rest of the population with mutated elite copies.`;
-  }
 
   function logEvent(message) {
     const ts = new Date().toLocaleTimeString();
@@ -453,7 +438,7 @@
     population = next;
 
     flashTicks = 4;
-    logEvent(`Gen ${generation}: ${describeGeneration()} | best=${metricsGen.bestFitness.toFixed(2)} avg=${metricsGen.avgFitness.toFixed(2)} points=${metricsGen.bestPoints.toFixed(2)} conceded=${metricsGen.bestConceded.toFixed(2)} returned=${metricsGen.bestReturned.toFixed(2)}`);
+    logEvent(`Gen ${generation}: best=${metricsGen.bestFitness.toFixed(2)} avg=${metricsGen.avgFitness.toFixed(2)} points=${metricsGen.bestPoints.toFixed(2)} conceded=${metricsGen.bestConceded.toFixed(2)} returned=${metricsGen.bestReturned.toFixed(2)}`);
     drawFitnessChart();
     drawMetricsChart();
     return metricsGen;
@@ -561,8 +546,7 @@ Latest generation metrics (best bot):
 Best fitness ever: ${bestFitnessEver.toFixed(2)}
 
 Learning logic:
-- Generation meaning: evaluate the whole population, rank by fitness, keep elites, mutate to form the next generation.
-- In this app that means ${POP} bots x ${MATCHES_PER_BOT} matches each per generation, then top ${ELITE} survive unchanged.
+- One generation = evaluate all bots -> keep elites -> mutate to refill population.
 - Scripted/non-adaptive opponent = fixed left-paddle rule that never learns.
 - Learning is real-time only when training is running (buttons, step, or auto-train during watch).
 - During pure watch mode with auto-train OFF, gameplay uses current best model without new learning.
@@ -801,7 +785,7 @@ ${extra}`;
   drawFitnessChart();
   drawMetricsChart();
   updateStats('Ready. Train generations, or watch continuously with optional auto-train.');
-  logEvent(`Initialized app. ${describeGeneration()}`);
+  logEvent('Initialized app.');
 })();
 </script>
 </body>
