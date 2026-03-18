@@ -519,6 +519,27 @@
           { label: "Changelog data", href: "./pong_evolution.versions.json", primary: false },
           { label: "Archived versions", href: "./versions/", primary: false }
         ]
+      },
+      {
+        name: "Pong RL",
+        version: "v1.0.1",
+        href: "./pong_RL/pong_RL.html",
+        artLabel: "Illustrated preview",
+        image: createPongPreview(),
+        description:
+          "A browser RL demo where one Pong paddle learns from episode rewards using tabular Q-learning instead of neuroevolution.",
+        expect:
+          "You can expect familiar Pong visuals, RL-specific charts and controls, and a direct comparison point with the evolution app.",
+        learn: [
+          "How epsilon-greedy exploration changes behavior over training episodes.",
+          "How rewards and value estimates shape a reinforcement-learning policy.",
+          "How the same game can be framed as RL instead of a population-based search problem."
+        ],
+        links: [
+          { label: "Launch Pong RL", href: "./pong_RL/pong_RL.html", primary: true },
+          { label: "Changelog data", href: "./pong_RL/pong_RL.versions.json", primary: false },
+          { label: "Archived versions", href: "./pong_RL/versions/", primary: false }
+        ]
       }
     ];
 

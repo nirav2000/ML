@@ -1,0 +1,24 @@
+{
+  "latest": "1.0.1",
+  "versions": [
+    {
+      "version": "1.0.1",
+      "label": "Initial standalone RL comparison app",
+      "appFile": "pong_RL/pong_RL.html",
+      "changes": [
+        "Added a standalone Pong RL app that mirrors the Pong Evolution layout for side-by-side comparison.",
+        "Replaced neuroevolution with tabular Q-learning over discretized Pong state and action values.",
+        "Added RL-native charts, controls, logs, and independent version-history wiring under pong_RL/."
+      ]
+    },
+    {
+      "version": "1.0.0",
+      "label": "Archived baseline RL build",
+      "appFile": "pong_RL/versions/1.0.0/pong_RL.html",
+      "changes": [
+        "First archived Pong RL build with episode rewards, epsilon-greedy exploration, and Q-table learning.",
+        "Stored as a separate app tree so RL iteration remains independent from the evolution app."
+      ]
+    }
+  ]
+}

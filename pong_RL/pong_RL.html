@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pong RL — Plain JS</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.4; }
+    .app-shell { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+    .left-pane { min-width: 680px; }
+    .right-pane { width: 360px; }
+    canvas { border: 1px solid #222; display:block; margin: 10px 0; background:#fff; }
+    button { margin: 4px 6px 4px 0; padding: 8px 12px; }
+    .controls { margin: 8px 0 10px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    #stats { white-space: pre-wrap; background: #f4f4f4; padding: 10px; border-radius: 8px; min-height: 280px; }
+    #log { white-space: pre-wrap; background:#111827; color:#e5e7eb; padding:10px; border-radius:8px; height:220px; overflow:auto; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+    .legend { background:#fafafa; border:1px solid #ddd; border-radius:8px; padding:10px; font-size:13px; margin-bottom:10px; }
+    .compare-note { margin-bottom:10px; padding:10px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; }
+    .dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; vertical-align:middle; }
+    .footer { margin-top: 10px; font-size: 12px; color: #555; }
+    .version-link { color: #0366d6; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+    .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; place-items: center; padding: 20px; z-index: 100; }
+    .modal.show { display: grid; }
+    .modal-card { width: min(760px, 100%); max-height: 82vh; overflow: auto; background: #fff; border: 1px solid #ddd; border-radius: 12px; padding: 12px; }
+    .modal-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+    .version-item { border:1px solid #ddd; border-radius:10px; padding:10px; margin-bottom:8px; }
+    .version-item.active { border-color:#0366d6; box-shadow:0 0 0 1px rgba(3,102,214,0.25); }
+    .version-item h3 { margin:0 0 6px; font-size:14px; }
+    .version-item ul { margin: 6px 0 0 18px; }
+  </style>
+</head>
+<body>
+  <h1>Pong RL — Plain JS</h1>
+  <p>Train the right (blue) paddle with reinforcement learning from interactive experience while the left (red) opponent remains scripted and non-adaptive.</p>
+
+  <div class="compare-note">
+    <strong>Comparison guide:</strong> <code>pong_evolution</code> uses neuroevolution / a genetic algorithm over neural nets. <code>pong_RL</code> uses reinforcement learning, updating one agent from episode-by-episode rewards gathered while it plays.
+  </div>
+
+  <div class="controls">
+    <button id="startTrain">Start training</button>
+    <button id="stopTrain">Stop training</button>
+    <button id="step1">Next +1 ep</button>
+    <button id="step10">Next +10 ep</button>
+    <button id="watch">Watch learned policy</button>
+    <button id="stopWatch">Stop animation</button>
+    <button id="reset">Reset agent</button>
+  </div>
+
+  <div class="controls">
+    <label for="speedControl"><strong>Playback speed</strong></label>
+    <input id="speedControl" type="range" min="0.25" max="8" step="0.25" value="1" />
+    <span id="speedValue">1.00x</span>
+
+    <label><input id="visualizeTraining" type="checkbox" checked /> Visualize training delays</label>
+    <label><input id="autoTrain" type="checkbox" checked /> Auto-train while watching</label>
+
+    <label for="episodeRate"><strong>Episode rate</strong></label>
+    <input id="episodeRate" type="range" min="0" max="60" step="1" value="8" />
+    <span id="episodeRateValue">8 ep/s</span>
+  </div>
+
+  <div class="app-shell">
+    <div class="left-pane">
+      <canvas id="game" width="640" height="400"></canvas>
+      <canvas id="rewardChart" width="640" height="170"></canvas>
+      <canvas id="learningChart" width="640" height="170"></canvas>
+    </div>
+
+    <div class="right-pane">
+      <div class="legend">
+        <div style="margin-bottom:8px;"><strong>What is an episode?</strong> One episode is a full Pong rally session from reset until either paddle reaches the target score or the frame budget is exhausted. After the episode, the blue agent updates its Q-values from the rewards it experienced.</div>
+        <div><span class="dot" style="background:#ef4444"></span>Red paddle: scripted opponent (fixed rule, no learning).</div>
+        <div><span class="dot" style="background:#2563eb"></span>Blue paddle: RL agent (tabular Q-learning over discretized game state).</div>
+        <div><span class="dot" style="background:#0366d6"></span>Reward chart blue: episode reward.</div>
+        <div><span class="dot" style="background:#d97706"></span>Reward chart orange: moving average reward.</div>
+        <div><span class="dot" style="background:#16a34a"></span>Learning chart green: exploration rate epsilon.</div>
+        <div><span class="dot" style="background:#7c3aed"></span>Learning chart purple: policy update count.</div>
+      </div>
+      <div id="stats"></div>
+      <h3 style="margin:10px 0 6px;">Learning / episode log</h3>
+      <div id="log"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Version <span id="appVersion">1.0.1</span> · <span class="version-link" id="openVersions">View changelog</span>
+  </div>
+
+  <div class="modal" id="versionsModal" aria-hidden="true">
+    <div class="modal-card">
+      <div class="modal-head">
+        <strong>Pong RL Version History</strong>
+        <button id="closeVersions">Close</button>
+      </div>
+      <div id="versionsList"></div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const APP_FILE = 'pong_RL/pong_RL.html';
+  const APP_VERSION = '1.0.1';
+  const HISTORY_FILE = 'pong_RL/pong_RL.versions.json';
+  const EMBEDDED_HISTORY = {
+    latest: '1.0.1',
+    versions: [
+      {
+        version: '1.0.1',
+        label: 'Initial standalone RL comparison app',
+        appFile: 'pong_RL/pong_RL.html',
+        changes: [
+          'Added a standalone Pong RL app that mirrors the Pong Evolution layout for side-by-side comparison.',
+          'Replaced neuroevolution with tabular Q-learning over discretized Pong state and action values.',
+          'Added RL-native charts, controls, logs, and independent version-history wiring under pong_RL/.'
+        ]
+      },
+      {
+        version: '1.0.0',
+        label: 'Archived baseline RL build',
+        appFile: 'pong_RL/versions/1.0.0/pong_RL.html',
+        changes: [
+          'First archived Pong RL build with episode rewards, epsilon-greedy exploration, and Q-table learning.',
+          'Stored as a separate app tree so RL iteration remains independent from the evolution app.'
+        ]
+      }
+    ]
+  };
+
+  function getRootPathPrefix() {
+    const p = window.location.pathname;
+    const marker = '/pong_RL/';
+    const idx = p.indexOf(marker);
+    if (idx !== -1) return p.slice(0, idx + 1);
+    const lastSlash = p.lastIndexOf('/');
+    return lastSlash === -1 ? '/' : p.slice(0, lastSlash + 1);
+  }
+  function getRootUrl() { return `${window.location.origin}${getRootPathPrefix()}`; }
+  function withBust(url) { return `${url}${url.includes('?') ? '&' : '?'}v=${Date.now()}`; }
+  function getCurrentAppFile() {
+    const prefix = getRootPathPrefix();
+    const path = window.location.pathname;
+    return path.startsWith(prefix) ? path.slice(prefix.length) : path.replace(/^\//, '');
+  }
+
+  const canvas = document.getElementById('game');
+  const stats = document.getElementById('stats');
+  const logBox = document.getElementById('log');
+  const rewardChart = document.getElementById('rewardChart');
+  const learningChart = document.getElementById('learningChart');
+
+  const speedControl = document.getElementById('speedControl');
+  const speedValue = document.getElementById('speedValue');
+  const visualizeTraining = document.getElementById('visualizeTraining');
+  const autoTrain = document.getElementById('autoTrain');
+  const episodeRate = document.getElementById('episodeRate');
+  const episodeRateValue = document.getElementById('episodeRateValue');
+
+  function setupHiDPICanvas(el) {
+    const cssW = Number(el.getAttribute('width'));
+    const cssH = Number(el.getAttribute('height'));
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    el.style.width = `${cssW}px`;
+    el.style.height = `${cssH}px`;
+    el.width = Math.floor(cssW * dpr);
+    el.height = Math.floor(cssH * dpr);
+    const ctx = el.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return { ctx, width: cssW, height: cssH };
+  }
+
+  const game = setupHiDPICanvas(canvas);
+  const reward = setupHiDPICanvas(rewardChart);
+  const learning = setupHiDPICanvas(learningChart);
+  const ctx = game.ctx;
+
+  const W = game.width;
+  const H = game.height;
+  const PADDLE_H = 80;
+  const PADDLE_W = 12;
+  const BALL = 10;
+  const PLAYER_X = 20;
+  const AI_X = W - 20 - PADDLE_W;
+  const TARGET_SCORE = 5;
+  const MAX_FRAMES = 2200;
+
+  const ACTIONS = [-1, 0, 1];
+  const ALPHA = 0.16;
+  const GAMMA = 0.96;
+  const EPSILON_MIN = 0.05;
+  const EPSILON_DECAY = 0.992;
+  const WATCH_EPSILON = 0.01;
+
+  let episode = 0;
+  let totalPolicyUpdates = 0;
+  let epsilon = 1;
+  let bestRewardEver = -Infinity;
+  let bestSnapshot = null;
+  let playbackSpeed = 1;
+  let episodeRatePerSec = 8;
+  let trainLoopId = null;
+  let animId = null;
+  let flashTicks = 0;
+
+  const trainingHistory = [];
+
+  function createFreshAgent() {
+    return {
+      qTable: new Map(),
+      stateVisits: new Map()
+    };
+  }
+  let agent = createFreshAgent();
+
+  function cloneMap(map) {
+    return new Map(Array.from(map.entries()));
+  }
+
+  function captureAgentSnapshot() {
+    return {
+      qTable: cloneMap(agent.qTable),
+      stateVisits: cloneMap(agent.stateVisits),
+      epsilon,
+      totalPolicyUpdates
+    };
+  }
+
+  function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+  function movingAverage(windowSize) {
+    const slice = trainingHistory.slice(-windowSize);
+    if (!slice.length) return 0;
+    return slice.reduce((sum, item) => sum + item.reward, 0) / slice.length;
+  }
+  function stateKey(parts) { return parts.join('|'); }
+
+  function getQValues(key) {
+    if (!agent.qTable.has(key)) agent.qTable.set(key, [0, 0, 0]);
+    return agent.qTable.get(key);
+  }
+
+  function discretizeState(ballX, ballY, vx, vy, aiY, playerY) {
+    const bx = clamp(Math.floor((ballX / W) * 12), 0, 11);
+    const by = clamp(Math.floor((ballY / H) * 12), 0, 11);
+    const dx = vx < -1 ? 0 : vx > 1 ? 2 : 1;
+    const dy = vy < -1 ? 0 : vy > 1 ? 2 : 1;
+    const aiBin = clamp(Math.floor((aiY / (H - PADDLE_H)) * 10), 0, 9);
+    const rel = clamp(Math.floor((((ballY - (aiY + PADDLE_H / 2)) / H) + 0.5) * 10), 0, 9);
+    const opp = clamp(Math.floor((playerY / (H - PADDLE_H)) * 8), 0, 7);
+    return stateKey([bx, by, dx, dy, aiBin, rel, opp]);
+  }
+
+  function chooseAction(key, epsilonValue, qTable = agent.qTable) {
+    const qValues = qTable.has(key) ? qTable.get(key) : [0, 0, 0];
+    if (Math.random() < epsilonValue) return Math.floor(Math.random() * ACTIONS.length);
+    let bestIndex = 0;
+    for (let i = 1; i < qValues.length; i++) {
+      if (qValues[i] > qValues[bestIndex]) bestIndex = i;
+    }
+    return bestIndex;
+  }
+
+  function applyQUpdate(state, actionIndex, rewardValue, nextState) {
+    const qValues = getQValues(state);
+    const nextValues = getQValues(nextState);
+    const tdTarget = rewardValue + GAMMA * Math.max(...nextValues);
+    qValues[actionIndex] += ALPHA * (tdTarget - qValues[actionIndex]);
+    totalPolicyUpdates += 1;
+  }
+
+  function describeEpisode() {
+    return 'An episode is one full play session. The agent acts, collects rewards, and then updates Q-values so future action choices improve.';
+  }
+
+  function logEvent(message) {
+    const ts = new Date().toLocaleTimeString();
+    const line = `[${ts}] ${message}`;
+    logBox.textContent = `${line}\n${logBox.textContent}`.split('\n').slice(0, 120).join('\n');
+  }
+
+  function drawAxes(c, minY, maxY, xLabel, leftPad = 42) {
+    c.ctx.strokeStyle = '#9ca3af';
+    c.ctx.lineWidth = 1;
+    c.ctx.beginPath();
+    c.ctx.moveTo(leftPad, 10);
+    c.ctx.lineTo(leftPad, c.height - 24);
+    c.ctx.lineTo(c.width - 10, c.height - 24);
+    c.ctx.stroke();
+    c.ctx.fillStyle = '#374151';
+    c.ctx.font = '12px Arial';
+    c.ctx.fillText(maxY.toFixed(2), 4, 16);
+    c.ctx.fillText(minY.toFixed(2), 4, c.height - 28);
+    if (trainingHistory.length > 1) {
+      const first = trainingHistory[0].episode;
+      const last = trainingHistory[trainingHistory.length - 1].episode;
+      c.ctx.fillText(`Ep ${first}`, leftPad + 2, c.height - 8);
+      c.ctx.fillText(`Ep ${last}`, c.width - 64, c.height - 8);
+    }
+    c.ctx.fillText(xLabel, Math.floor(c.width / 2) - 28, c.height - 8);
+  }
+
+  function drawSeries(c, arr, accessor, color, minY, rangeY, leftPad = 42) {
+    c.ctx.strokeStyle = color;
+    c.ctx.lineWidth = 2;
+    c.ctx.beginPath();
+    arr.forEach((d, i) => {
+      const x = leftPad + i * ((c.width - (leftPad + 10)) / Math.max(1, arr.length - 1));
+      const y = (c.height - 24) - ((accessor(d) - minY) / rangeY) * (c.height - 34);
+      if (i === 0) c.ctx.moveTo(x, y);
+      else c.ctx.lineTo(x, y);
+    });
+    c.ctx.stroke();
+  }
+
+  function drawRewardChart() {
+    reward.ctx.clearRect(0, 0, reward.width, reward.height);
+    reward.ctx.fillStyle = '#f9fafb';
+    reward.ctx.fillRect(0, 0, reward.width, reward.height);
+    if (!trainingHistory.length) {
+      reward.ctx.fillStyle = '#374151';
+      reward.ctx.fillText('Episode reward and moving average reward.', 10, 20);
+      return;
+    }
+    const minY = Math.min(...trainingHistory.flatMap((d) => [d.reward, d.movingReward]));
+    const maxY = Math.max(...trainingHistory.flatMap((d) => [d.reward, d.movingReward]));
+    const rangeY = Math.max(1, maxY - minY);
+    drawAxes(reward, minY, maxY, 'episode axis');
+    drawSeries(reward, trainingHistory, (d) => d.reward, '#0366d6', minY, rangeY);
+    drawSeries(reward, trainingHistory, (d) => d.movingReward, '#d97706', minY, rangeY);
+  }
+
+  function drawLearningChart() {
+    learning.ctx.clearRect(0, 0, learning.width, learning.height);
+    learning.ctx.fillStyle = '#f9fafb';
+    learning.ctx.fillRect(0, 0, learning.width, learning.height);
+    if (!trainingHistory.length) {
+      learning.ctx.fillStyle = '#374151';
+      learning.ctx.fillText('Exploration rate, updates, and value estimates by episode.', 10, 20);
+      return;
+    }
+    const minY = Math.min(...trainingHistory.flatMap((d) => [d.epsilon, d.avgMaxQ, d.updates / 200]));
+    const maxY = Math.max(...trainingHistory.flatMap((d) => [d.epsilon, d.avgMaxQ, d.updates / 200]));
+    const rangeY = Math.max(1, maxY - minY);
+    drawAxes(learning, minY, maxY, 'episode axis');
+    drawSeries(learning, trainingHistory, (d) => d.epsilon, '#16a34a', minY, rangeY);
+    drawSeries(learning, trainingHistory, (d) => d.updates / 200, '#7c3aed', minY, rangeY);
+    drawSeries(learning, trainingHistory, (d) => d.avgMaxQ, '#dc2626', minY, rangeY);
+  }
+
+  function drawScene(playerY, aiY, ballX, ballY, rewardValue, playerScore, aiScore, status) {
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(PLAYER_X, playerY, PADDLE_W, PADDLE_H);
+    ctx.fillStyle = '#2563eb';
+    ctx.fillRect(AI_X, aiY, PADDLE_W, PADDLE_H);
+    ctx.fillStyle = '#111827';
+    ctx.fillRect(ballX, ballY, BALL, BALL);
+    if (flashTicks > 0) {
+      ctx.fillStyle = 'rgba(34, 197, 94, 0.16)';
+      ctx.fillRect(0, 0, W, H);
+      flashTicks--;
+    }
+    ctx.setLineDash([6, 6]);
+    ctx.beginPath();
+    ctx.moveTo(W / 2, 0);
+    ctx.lineTo(W / 2, H);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#111827';
+    ctx.fillText(`Ep ${episode}`, 10, 14);
+    ctx.fillText(`Reward ${rewardValue.toFixed(2)}`, 10, 30);
+    ctx.fillText(`Red ${playerScore}  Blue ${aiScore}`, 10, 46);
+    ctx.fillText(status, 10, 62);
+  }
+
+  function scriptedOpponent(playerY, ballY) {
+    const target = ballY - PADDLE_H / 2;
+    return clamp(playerY + clamp(target - playerY, -4.4, 4.4), 0, H - PADDLE_H);
+  }
+
+  function runEpisode({ render = false, policyOnly = false, epsilonOverride = null } = {}) {
+    let playerY = H / 2 - PADDLE_H / 2;
+    let aiY = H / 2 - PADDLE_H / 2;
+    let ballX = W / 2;
+    let ballY = H / 2;
+    let vx = (Math.random() < 0.5 ? -1 : 1) * (4 + Math.random() * 1.3);
+    let vy = (Math.random() * 2 - 1) * 2.5;
+    let rewardValue = 0;
+    let playerScore = 0;
+    let aiScore = 0;
+    let updatesBefore = totalPolicyUpdates;
+    let maxQAccumulator = 0;
+    let decisionCount = 0;
+
+    for (let frame = 0; frame < MAX_FRAMES; frame++) {
+      playerY = scriptedOpponent(playerY, ballY);
+      const state = discretizeState(ballX, ballY, vx, vy, aiY, playerY);
+      const epsilonForStep = epsilonOverride ?? (policyOnly ? WATCH_EPSILON : epsilon);
+      const actionIndex = chooseAction(state, epsilonForStep);
+      agent.stateVisits.set(state, (agent.stateVisits.get(state) || 0) + 1);
+
+      aiY = clamp(aiY + ACTIONS[actionIndex] * 6.2, 0, H - PADDLE_H);
+
+      ballX += vx;
+      ballY += vy;
+      let stepReward = -0.02;
+
+      if (ballY <= 0 || ballY >= H - BALL) {
+        vy *= -1;
+        ballY = clamp(ballY, 0, H - BALL);
+      }
+
+      if (ballX <= PLAYER_X + PADDLE_W && ballY + BALL >= playerY && ballY <= playerY + PADDLE_H && vx < 0) {
+        ballX = PLAYER_X + PADDLE_W;
+        vx *= -1;
+        const offset = (ballY + BALL / 2) - (playerY + PADDLE_H / 2);
+        vy += offset * 0.05;
+      }
+
+      if (ballX + BALL >= AI_X && ballY + BALL >= aiY && ballY <= aiY + PADDLE_H && vx > 0) {
+        ballX = AI_X - BALL;
+        vx *= -1;
+        const offset = (ballY + BALL / 2) - (aiY + PADDLE_H / 2);
+        vy += offset * 0.05;
+        stepReward += 1.2;
+      }
+
+      const distancePenalty = Math.abs((aiY + PADDLE_H / 2) - (ballY + BALL / 2)) / (H / 2);
+      stepReward += 0.08 * (1 - Math.min(1, distancePenalty));
+
+      if (ballX < 0) {
+        aiScore++;
+        stepReward += 6;
+        ballX = W / 2; ballY = H / 2;
+        vx = 4 + Math.random() * 1.3;
+        vy = (Math.random() * 2 - 1) * 2.5;
+        flashTicks = 2;
+      } else if (ballX > W) {
+        playerScore++;
+        stepReward -= 7;
+        ballX = W / 2; ballY = H / 2;
+        vx = -(4 + Math.random() * 1.3);
+        vy = (Math.random() * 2 - 1) * 2.5;
+      }
+
+      const nextState = discretizeState(ballX, ballY, vx, vy, aiY, playerY);
+      if (!policyOnly) applyQUpdate(state, actionIndex, stepReward, nextState);
+
+      rewardValue += stepReward;
+      const qValues = getQValues(state);
+      maxQAccumulator += Math.max(...qValues);
+      decisionCount++;
+
+      if (render && frame % Math.max(1, Math.floor(4 / Math.max(0.25, playbackSpeed))) === 0) {
+        drawScene(playerY, aiY, ballX, ballY, rewardValue, playerScore, aiScore, policyOnly ? 'Watching policy' : 'Training episode');
+      }
+
+      if (playerScore >= TARGET_SCORE || aiScore >= TARGET_SCORE) break;
+    }
+
+    if (!policyOnly) {
+      episode += 1;
+      epsilon = Math.max(EPSILON_MIN, epsilon * EPSILON_DECAY);
+      const avgMaxQ = decisionCount ? maxQAccumulator / decisionCount : 0;
+      const movingReward = trainingHistory.length ? (movingAverage(19) * 19 + rewardValue) / 20 : rewardValue;
+      const summary = {
+        episode,
+        reward: rewardValue,
+        movingReward,
+        epsilon,
+        updates: totalPolicyUpdates,
+        avgMaxQ,
+        aiScore,
+        playerScore,
+        visitedStates: agent.qTable.size,
+        updatesThisEpisode: totalPolicyUpdates - updatesBefore
+      };
+      trainingHistory.push(summary);
+      if (trainingHistory.length > 260) trainingHistory.shift();
+      if (rewardValue > bestRewardEver) {
+        bestRewardEver = rewardValue;
+        bestSnapshot = captureAgentSnapshot();
+      }
+      logEvent(`Ep ${episode}: ${describeEpisode()} | reward=${rewardValue.toFixed(2)} movingAvg=${movingReward.toFixed(2)} epsilon=${epsilon.toFixed(3)} updates+=${summary.updatesThisEpisode} score ${aiScore}-${playerScore}`);
+      drawRewardChart();
+      drawLearningChart();
+      return summary;
+    }
+
+    return { reward: rewardValue, aiScore, playerScore };
+  }
+
+  function updateStats(extra = '') {
+    const latest = trainingHistory[trainingHistory.length - 1];
+    stats.textContent =
+`Episode: ${episode}
+Learning algorithm: tabular Q-learning
+State representation: discretized ball position, velocity, AI paddle position, relative ball offset, opponent position
+Action space: move up / stay / move down
+Playback speed: ${playbackSpeed.toFixed(2)}x
+Auto-train while watching: ${autoTrain.checked ? 'ON' : 'OFF'} @ ${episodeRatePerSec.toFixed(0)} ep/s
+
+Latest episode metrics:
+- Episode reward: ${latest ? latest.reward.toFixed(2) : 'n/a'}
+- Moving average reward: ${latest ? latest.movingReward.toFixed(2) : 'n/a'}
+- Exploration rate (epsilon): ${epsilon.toFixed(3)}
+- Policy update count: ${totalPolicyUpdates}
+- Average max Q estimate: ${latest ? latest.avgMaxQ.toFixed(3) : 'n/a'}
+- Blue score / Red score: ${latest ? `${latest.aiScore} / ${latest.playerScore}` : 'n/a'}
+- Visited state count: ${agent.qTable.size}
+Best episode reward ever: ${bestRewardEver === -Infinity ? 'n/a' : bestRewardEver.toFixed(2)}
+
+Learning logic:
+- ${describeEpisode()}
+- Rewards encourage returning the ball, scoring, and staying aligned with the ball.
+- Epsilon-greedy exploration means the agent sometimes tries non-greedy actions so it can discover better value estimates.
+- Unlike pong_evolution, there is no population, elite selection, mutation, or generation loop.
+- During watch mode with auto-train OFF, the app replays the learned policy without changing Q-values.
+
+${extra}`;
+  }
+
+  function stopTrainingLoop() {
+    if (trainLoopId !== null) clearInterval(trainLoopId);
+    trainLoopId = null;
+  }
+  function stopAnim() {
+    if (animId !== null) cancelAnimationFrame(animId);
+    animId = null;
+  }
+  function stopAllMotion() {
+    stopTrainingLoop();
+    stopAnim();
+  }
+  function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
+
+  async function trainEpisodes(count) {
+    stopAnim();
+    for (let i = 0; i < count; i++) {
+      runEpisode({ render: visualizeTraining.checked });
+      updateStats(`Training episode ${i + 1}/${count}...`);
+      if (visualizeTraining.checked) await sleep(Math.max(10, 170 / Math.max(0.25, playbackSpeed)));
+    }
+    updateStats(`Trained ${count} episode(s).`);
+  }
+
+  function startTrainingLoop() {
+    stopAnim();
+    stopTrainingLoop();
+    trainLoopId = setInterval(() => {
+      for (let i = 0; i < Math.max(1, Math.round(episodeRatePerSec / 4)); i++) runEpisode({ render: false });
+      updateStats('Continuous training is running.');
+    }, 250);
+    logEvent('Continuous training started.');
+    updateStats('Continuous training is running.');
+  }
+
+  function watchPolicy() {
+    stopAllMotion();
+    const snapshot = bestSnapshot || captureAgentSnapshot();
+    const watchQTable = cloneMap(snapshot.qTable);
+    let playerY = H / 2 - PADDLE_H / 2;
+    let aiY = H / 2 - PADDLE_H / 2;
+    let ballX = W / 2;
+    let ballY = H / 2;
+    let vx = -(4 + Math.random() * 1.3);
+    let vy = (Math.random() * 2 - 1) * 2.5;
+    let rewardValue = 0;
+    let playerScore = 0;
+    let aiScore = 0;
+    let trainBudget = 0;
+
+    function stepOneTick() {
+      playerY = scriptedOpponent(playerY, ballY);
+      const state = discretizeState(ballX, ballY, vx, vy, aiY, playerY);
+      const actionIndex = chooseAction(state, WATCH_EPSILON, watchQTable);
+      aiY = clamp(aiY + ACTIONS[actionIndex] * 6.2, 0, H - PADDLE_H);
+      ballX += vx;
+      ballY += vy;
+      rewardValue -= 0.01;
+
+      if (ballY <= 0 || ballY >= H - BALL) {
+        vy *= -1;
+        ballY = clamp(ballY, 0, H - BALL);
+      }
+      if (ballX <= PLAYER_X + PADDLE_W && ballY + BALL >= playerY && ballY <= playerY + PADDLE_H && vx < 0) {
+        ballX = PLAYER_X + PADDLE_W;
+        vx *= -1;
+        const offset = (ballY + BALL / 2) - (playerY + PADDLE_H / 2);
+        vy += offset * 0.05;
+      }
+      if (ballX + BALL >= AI_X && ballY + BALL >= aiY && ballY <= aiY + PADDLE_H && vx > 0) {
+        ballX = AI_X - BALL;
+        vx *= -1;
+        const offset = (ballY + BALL / 2) - (aiY + PADDLE_H / 2);
+        vy += offset * 0.05;
+        rewardValue += 1.2;
+      }
+      if (ballX < 0) {
+        aiScore++;
+        rewardValue += 6;
+        ballX = W / 2; ballY = H / 2;
+        vx = 4 + Math.random() * 1.3;
+        vy = (Math.random() * 2 - 1) * 2.5;
+      } else if (ballX > W) {
+        playerScore++;
+        rewardValue -= 7;
+        ballX = W / 2; ballY = H / 2;
+        vx = -(4 + Math.random() * 1.3);
+        vy = (Math.random() * 2 - 1) * 2.5;
+      }
+    }
+
+    function loop() {
+      let stepBudget = Math.max(1, Math.floor(playbackSpeed));
+      while (stepBudget-- > 0) stepOneTick();
+
+      if (autoTrain.checked) {
+        trainBudget += (episodeRatePerSec / 60) * Math.max(0.25, playbackSpeed);
+        while (trainBudget >= 1) {
+          runEpisode({ render: false });
+          trainBudget -= 1;
+        }
+      }
+
+      drawScene(playerY, aiY, ballX, ballY, rewardValue, playerScore, aiScore, autoTrain.checked ? 'Watching + background training' : 'Watching policy only');
+      updateStats(autoTrain.checked ? 'Watching while background episodes continue updating the Q-table.' : 'Watching the learned policy with Q-values frozen.');
+      animId = requestAnimationFrame(loop);
+    }
+
+    loop();
+    logEvent('Watch mode started.');
+  }
+
+  function renderVersionList(list, versions, current, warning = '') {
+    list.innerHTML = `${warning ? `<div style="margin-bottom:8px;color:#b00020;">${warning}</div>` : ''}` +
+      versions.map((entry) => {
+        const active = entry.appFile === current ? ' active' : '';
+        const changes = (entry.changes || []).map((c) => `<li>${c}</li>`).join('');
+        return `<div class="version-item${active}">
+          <h3>${entry.version} — ${entry.label || ''}</h3>
+          <div><button data-app-file="${entry.appFile}">Open this version</button></div>
+          <ul>${changes}</ul>
+        </div>`;
+      }).join('');
+
+    list.querySelectorAll('button[data-app-file]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const target = btn.getAttribute('data-app-file');
+        if (target && target !== getCurrentAppFile()) window.location.href = withBust(`${getRootUrl()}${target}`);
+      });
+    });
+  }
+
+  async function loadVersionHistory() {
+    const list = document.getElementById('versionsList');
+    list.textContent = 'Loading history...';
+    try {
+      const res = await fetch(withBust(`${getRootUrl()}${HISTORY_FILE}`), { cache: 'no-store' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      renderVersionList(list, Array.isArray(data.versions) ? data.versions : [], getCurrentAppFile());
+    } catch (err) {
+      renderVersionList(list, EMBEDDED_HISTORY.versions, getCurrentAppFile(), `Unable to load version history JSON (${err.message}). Showing embedded fallback history.`);
+    }
+  }
+
+  document.getElementById('startTrain').onclick = startTrainingLoop;
+  document.getElementById('stopTrain').onclick = () => { stopTrainingLoop(); updateStats('Continuous training stopped.'); logEvent('Continuous training stopped.'); };
+  document.getElementById('step1').onclick = () => { stopTrainingLoop(); stopAnim(); trainEpisodes(1); };
+  document.getElementById('step10').onclick = () => { stopTrainingLoop(); stopAnim(); trainEpisodes(10); };
+  document.getElementById('watch').onclick = watchPolicy;
+  document.getElementById('stopWatch').onclick = () => { stopAnim(); updateStats('Animation stopped manually.'); logEvent('Watch mode stopped manually.'); };
+  document.getElementById('reset').onclick = () => {
+    stopAllMotion();
+    episode = 0;
+    totalPolicyUpdates = 0;
+    epsilon = 1;
+    bestRewardEver = -Infinity;
+    bestSnapshot = null;
+    flashTicks = 0;
+    agent = createFreshAgent();
+    trainingHistory.length = 0;
+    drawRewardChart();
+    drawLearningChart();
+    ctx.clearRect(0, 0, W, H);
+    updateStats('Agent reset.');
+    logEvent('Agent reset.');
+  };
+
+  speedControl.addEventListener('input', () => {
+    playbackSpeed = Number(speedControl.value) || 1;
+    speedValue.textContent = `${playbackSpeed.toFixed(2)}x`;
+    updateStats('Updated playback speed.');
+  });
+  episodeRate.addEventListener('input', () => {
+    episodeRatePerSec = Number(episodeRate.value) || 0;
+    episodeRateValue.textContent = `${episodeRatePerSec.toFixed(0)} ep/s`;
+    updateStats('Updated episode rate.');
+  });
+
+  speedValue.textContent = `${playbackSpeed.toFixed(2)}x`;
+  episodeRateValue.textContent = `${episodeRatePerSec.toFixed(0)} ep/s`;
+  document.getElementById('appVersion').textContent = APP_VERSION;
+  document.getElementById('openVersions').addEventListener('click', async () => {
+    document.getElementById('versionsModal').classList.add('show');
+    document.getElementById('versionsModal').setAttribute('aria-hidden', 'false');
+    await loadVersionHistory();
+  });
+  document.getElementById('closeVersions').addEventListener('click', () => {
+    document.getElementById('versionsModal').classList.remove('show');
+    document.getElementById('versionsModal').setAttribute('aria-hidden', 'true');
+  });
+  document.getElementById('versionsModal').addEventListener('click', (e) => {
+    if (e.target.id === 'versionsModal') {
+      document.getElementById('versionsModal').classList.remove('show');
+      document.getElementById('versionsModal').setAttribute('aria-hidden', 'true');
+    }
+  });
+
+  drawRewardChart();
+  drawLearningChart();
+  updateStats('Ready. Train episodes, or watch continuously with optional auto-train.');
+  logEvent(`Initialized app. ${describeEpisode()}`);
+})();
+</script>
+</body>
+</html>

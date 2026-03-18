@@ -6,6 +6,7 @@ This repository contains interactive browser-based experiments focused on machin
 - `index.html` — repo dashboard for discovering the apps.
 - `ML101.html` — interactive ML-focused playground.
 - `pong_evolution.html` — evolutionary Pong simulation.
+- `pong_RL/pong_RL.html` — reinforcement-learning Pong simulation.
 
 ## Pong apps
 
