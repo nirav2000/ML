@@ -14,8 +14,12 @@
     </radialGradient>
   </defs>
   <rect width="1200" height="760" rx="44" fill="url(#bg)"/>
-  <rect width="1200" height="760" rx="44" fill="url(#glowA)"/>
-  <rect width="1200" height="760" rx="44" fill="url(#glowB)"/>
+  <rect width="1200" height="760" rx="44" fill="url(#glowA)">
+    <animate attributeName="opacity" values="0.72;1;0.72" dur="8s" repeatCount="indefinite"/>
+  </rect>
+  <rect width="1200" height="760" rx="44" fill="url(#glowB)">
+    <animate attributeName="opacity" values="0.55;0.85;0.55" dur="9s" repeatCount="indefinite"/>
+  </rect>
   <rect x="44" y="42" width="1112" height="676" rx="34" fill="#0d182b" stroke="#ffffff" stroke-opacity="0.12"/>
   <rect x="72" y="68" width="256" height="44" rx="22" fill="rgba(120,166,255,0.14)" stroke="#78a6ff" stroke-opacity="0.24"/>
   <text x="104" y="97" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#ff8a7a">Duel</text>
