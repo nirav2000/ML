@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" role="img" aria-label="ML101 preview">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a1426"/>
+      <stop offset="100%" stop-color="#07111f"/>
+    </linearGradient>
+    <radialGradient id="glowA" cx="0.15" cy="0.1" r="0.8">
+      <stop offset="0%" stop-color="#78a6ff" stop-opacity="0.32"/>
+      <stop offset="100%" stop-color="#78a6ff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowB" cx="0.9" cy="0.15" r="0.7">
+      <stop offset="0%" stop-color="#5fe2c2" stop-opacity="0.24"/>
+      <stop offset="100%" stop-color="#5fe2c2" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="760" rx="44" fill="url(#bg)"/>
+  <rect width="1200" height="760" rx="44" fill="url(#glowA)"/>
+  <rect width="1200" height="760" rx="44" fill="url(#glowB)"/>
+  <rect x="44" y="42" width="1112" height="676" rx="34" fill="#0d182b" stroke="#ffffff" stroke-opacity="0.12"/>
+  <rect x="72" y="68" width="256" height="44" rx="22" fill="rgba(120,166,255,0.14)" stroke="#78a6ff" stroke-opacity="0.24"/>
+  <text x="104" y="97" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#78a6ff">Snapshot</text>
+  <text x="72" y="174" font-family="Arial, sans-serif" font-size="62" font-weight="700" fill="#f3f7ff">ML101</text>
+  <text x="72" y="225" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#a6b5cf">Interactive model behavior</text>
+  <g transform="translate(0 8)">
+    <rect x="72" y="286" width="320" height="360" rx="26" fill="#eef3ff"/>
+    <rect x="430" y="286" width="640" height="212" rx="28" fill="#13284a"/>
+    <polyline points="470,452 548,392 614,420 698,334 782,370 872,298 948,346 1024,254" fill="none" stroke="#78a6ff" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="1024" cy="254" r="14" fill="#5fe2c2"/>
+    <rect x="430" y="534" width="290" height="112" rx="24" fill="#f8fbff"/>
+    <rect x="780" y="534" width="290" height="112" rx="24" fill="#f8fbff"/>
+    <rect x="114" y="332" width="180" height="18" rx="9" fill="#bed1ff"/>
+    <rect x="114" y="376" width="220" height="16" rx="8" fill="#dfe9ff"/>
+    <rect x="114" y="412" width="220" height="16" rx="8" fill="#dfe9ff"/>
+    <rect x="114" y="448" width="188" height="16" rx="8" fill="#dfe9ff"/>
+    <rect x="114" y="510" width="198" height="52" rx="26" fill="#78a6ff"/>
+    </g>
+</svg>

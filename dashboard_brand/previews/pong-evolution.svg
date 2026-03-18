@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 760" role="img" aria-label="Pong Evolution preview">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0a1426"/>
+      <stop offset="100%" stop-color="#07111f"/>
+    </linearGradient>
+    <radialGradient id="glowA" cx="0.15" cy="0.1" r="0.8">
+      <stop offset="0%" stop-color="#78a6ff" stop-opacity="0.32"/>
+      <stop offset="100%" stop-color="#78a6ff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowB" cx="0.9" cy="0.15" r="0.7">
+      <stop offset="0%" stop-color="#ffc76b" stop-opacity="0.24"/>
+      <stop offset="100%" stop-color="#ffc76b" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="760" rx="44" fill="url(#bg)"/>
+  <rect width="1200" height="760" rx="44" fill="url(#glowA)"/>
+  <rect width="1200" height="760" rx="44" fill="url(#glowB)"/>
+  <rect x="44" y="42" width="1112" height="676" rx="34" fill="#0d182b" stroke="#ffffff" stroke-opacity="0.12"/>
+  <rect x="72" y="68" width="256" height="44" rx="22" fill="rgba(120,166,255,0.14)" stroke="#78a6ff" stroke-opacity="0.24"/>
+  <text x="104" y="97" font-family="Arial, sans-serif" font-size="21" font-weight="700" fill="#78a6ff">Arcade sim</text>
+  <text x="72" y="174" font-family="Arial, sans-serif" font-size="62" font-weight="700" fill="#f3f7ff">Pong Evolution</text>
+  <text x="72" y="225" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#a6b5cf">Mutation · Selection · Improvement</text>
+  <g transform="translate(0 8)">
+    <rect x="98" y="284" width="980" height="354" rx="32" fill="#08182c" stroke="#284b75"/>
+    <line x1="588" y1="314" x2="588" y2="606" stroke="#dce9ff" stroke-width="10" stroke-dasharray="16 18" opacity="0.9"/>
+    <rect x="142" y="402" width="24" height="120" rx="12" fill="#78a6ff"/>
+    <rect x="1004" y="438" width="24" height="120" rx="12" fill="#5fe2c2"/>
+    <circle cx="642" cy="446" r="18" fill="#ffffff"/>
+    <path d="M742 348 C820 370, 874 438, 904 520" fill="none" stroke="#ffc76b" stroke-width="12" stroke-linecap="round"/>
+    <path d="M770 370 L742 348 L780 340" fill="none" stroke="#ffc76b" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="120" y="314" width="180" height="54" rx="20" fill="#102540" stroke="#284b75"/>
+    <rect x="876" y="314" width="180" height="54" rx="20" fill="#102540" stroke="#284b75"/>
+    <text x="182" y="349" font-family="Arial, sans-serif" font-size="26" font-weight="700" fill="#dce9ff">12</text>
+    <text x="940" y="349" font-family="Arial, sans-serif" font-size="26" font-weight="700" fill="#dce9ff">18</text>
+    <rect x="120" y="562" width="286" height="54" rx="20" fill="#0f2139" stroke="#284b75"/>
+    <rect x="436" y="562" width="588" height="54" rx="20" fill="#0f2139" stroke="#284b75"/>
+    <text x="152" y="597" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#5fe2c2">Generation 148</text>
+    <text x="468" y="597" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#dce9ff">Mutation · Selection · Improvement</text>
+    </g>
+</svg>

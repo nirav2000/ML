@@ -1,0 +1,32 @@
+{
+  "previews": [
+    {
+      "slug": "ml101",
+      "title": "ML101",
+      "subtitle": "Interactive model behavior",
+      "tag": "Snapshot",
+      "variant": "ml"
+    },
+    {
+      "slug": "pong-evolution",
+      "title": "Pong Evolution",
+      "subtitle": "Mutation · Selection · Improvement",
+      "tag": "Arcade sim",
+      "variant": "evolution"
+    },
+    {
+      "slug": "pong-rl",
+      "title": "Pong RL",
+      "subtitle": "Q-learning · Rewards · Episodes",
+      "tag": "RL training",
+      "variant": "rl"
+    },
+    {
+      "slug": "piong-compare",
+      "title": "Piong Compare",
+      "subtitle": "Evolution vs RL side-by-side",
+      "tag": "Compare",
+      "variant": "compare"
+    }
+  ]
+}

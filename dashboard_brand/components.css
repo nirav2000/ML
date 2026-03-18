@@ -1,0 +1,77 @@
+.brand-actions,
+.brand-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.brand-button,
+.brand-button-secondary,
+.brand-chip,
+.brand-card {
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.brand-button,
+.brand-button-secondary,
+.brand-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+  border-radius: 999px;
+  padding: 12px 16px;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.brand-button {
+  background: linear-gradient(135deg, var(--brand-accent), #8a72ff);
+  color: #061120;
+  box-shadow: 0 18px 32px rgba(120, 166, 255, 0.25);
+}
+
+.brand-button-secondary,
+.brand-chip {
+  background: rgba(255,255,255,0.04);
+  border-color: var(--brand-line);
+  color: var(--brand-text);
+}
+
+.brand-card {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, rgba(17, 31, 55, 0.92), rgba(8, 18, 33, 0.94));
+  border: 1px solid var(--brand-line);
+  border-radius: var(--brand-radius);
+  box-shadow: var(--brand-shadow);
+}
+
+.brand-card:hover,
+.brand-button:hover,
+.brand-button-secondary:hover,
+.brand-chip:hover {
+  transform: translateY(-2px);
+}
+
+.brand-card-body {
+  padding: 22px;
+  display: grid;
+  gap: 16px;
+}
+
+.brand-muted { color: var(--brand-muted); }
+.brand-pill {
+  display: inline-flex;
+  width: fit-content;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(120,166,255,0.12);
+  border: 1px solid rgba(120,166,255,0.24);
+  color: var(--brand-accent);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
