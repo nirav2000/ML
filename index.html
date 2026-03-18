@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ML Dashboard</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f7fb;
+      --panel: rgba(255, 255, 255, 0.88);
+      --panel-strong: #ffffff;
+      --text: #132033;
+      --muted: #53627a;
+      --accent: #4f7cff;
+      --accent-2: #16b3a3;
+      --border: rgba(19, 32, 51, 0.1);
+      --shadow: 0 24px 60px rgba(40, 61, 102, 0.15);
+      --radius: 24px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(79, 124, 255, 0.18), transparent 30%),
+        radial-gradient(circle at top right, rgba(22, 179, 163, 0.15), transparent 28%),
+        linear-gradient(180deg, #f9fbff 0%, var(--bg) 100%);
+      min-height: 100vh;
+    }
+
+    a { color: inherit; }
+
+    .shell {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 32px 0 56px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, rgba(255,255,255,0.92), rgba(255,255,255,0.74));
+      border: 1px solid var(--border);
+      border-radius: 32px;
+      box-shadow: var(--shadow);
+      padding: 36px;
+      backdrop-filter: blur(10px);
+      margin-bottom: 28px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      background: rgba(79, 124, 255, 0.1);
+      color: var(--accent);
+      padding: 8px 14px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    h1 {
+      font-size: clamp(2.2rem, 6vw, 4.2rem);
+      line-height: 1.02;
+      margin: 18px 0 14px;
+      max-width: 10ch;
+    }
+
+    .hero p {
+      font-size: 1.05rem;
+      line-height: 1.7;
+      color: var(--muted);
+      max-width: 66ch;
+      margin: 0;
+    }
+
+    .quick-links,
+    .repo-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .pill,
+    .repo-link,
+    .primary-link,
+    .secondary-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-decoration: none;
+      border-radius: 999px;
+      transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+    }
+
+    .pill,
+    .repo-link {
+      padding: 11px 16px;
+      background: rgba(255,255,255,0.84);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .pill:hover,
+    .repo-link:hover,
+    .primary-link:hover,
+    .secondary-link:hover,
+    .card:hover {
+      transform: translateY(-2px);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+      gap: 22px;
+      margin-top: 24px;
+    }
+
+    .card {
+      display: flex;
+      flex-direction: column;
+      min-height: 100%;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .preview {
+      position: relative;
+      min-height: 230px;
+      background: linear-gradient(135deg, rgba(79,124,255,0.16), rgba(22,179,163,0.15));
+      overflow: hidden;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .preview iframe {
+      position: absolute;
+      inset: 0;
+      width: 180%;
+      height: 180%;
+      border: 0;
+      transform: scale(0.56);
+      transform-origin: top left;
+      pointer-events: none;
+      background: white;
+    }
+
+    .preview::after {
+      content: "Preview";
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      background: rgba(255,255,255,0.88);
+      color: var(--muted);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(19,32,51,0.08);
+    }
+
+    .placeholder {
+      display: grid;
+      place-items: center;
+      height: 100%;
+      min-height: 230px;
+      padding: 24px;
+      text-align: center;
+      background:
+        radial-gradient(circle at top, rgba(79,124,255,0.26), transparent 44%),
+        linear-gradient(135deg, rgba(255,255,255,0.95), rgba(232,239,255,0.82));
+    }
+
+    .placeholder-art {
+      width: min(220px, 100%);
+      aspect-ratio: 1.1;
+      border-radius: 28px;
+      display: grid;
+      place-items: center;
+      border: 1px dashed rgba(79,124,255,0.35);
+      background: rgba(255,255,255,0.66);
+      color: var(--accent);
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .content {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding: 22px;
+      flex: 1;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
+    .card h2 {
+      margin: 0;
+      font-size: 1.35rem;
+    }
+
+    .version {
+      flex-shrink: 0;
+      border-radius: 999px;
+      padding: 8px 12px;
+      background: rgba(79,124,255,0.1);
+      color: var(--accent);
+      font-size: 0.84rem;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+    }
+
+    .description,
+    .meta-list li,
+    .future-note {
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .meta {
+      display: grid;
+      gap: 10px;
+    }
+
+    .meta strong {
+      display: inline-block;
+      margin-bottom: 4px;
+      color: var(--text);
+    }
+
+    .meta-list {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: auto;
+      padding-top: 4px;
+    }
+
+    .primary-link,
+    .secondary-link {
+      padding: 12px 16px;
+      font-weight: 700;
+      border: 1px solid transparent;
+    }
+
+    .primary-link {
+      background: linear-gradient(135deg, var(--accent), #6d5efc);
+      color: white;
+      box-shadow: 0 16px 32px rgba(79, 124, 255, 0.22);
+    }
+
+    .secondary-link {
+      border-color: var(--border);
+      background: rgba(255,255,255,0.9);
+      color: var(--text);
+    }
+
+    .section-title {
+      margin: 34px 0 14px;
+      font-size: 1.2rem;
+    }
+
+    footer {
+      margin-top: 28px;
+      padding: 22px 0 6px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    @media (max-width: 720px) {
+      .hero { padding: 26px 20px; }
+      .content { padding: 18px; }
+      .preview iframe {
+        width: 220%;
+        height: 220%;
+        transform: scale(0.45);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="eyebrow">Dashboard · ML app showcase</div>
+      <h1>Explore the apps in this repo.</h1>
+      <p>
+        This landing page gives the repository a friendly front door: jump straight into each app,
+        scan what version is currently live, see a visual preview, and understand what concepts you
+        will learn before you click through.
+      </p>
+      <div class="quick-links">
+        <a class="pill" href="#apps">Browse apps</a>
+        <a class="pill" href="#repo-resources">Repo resources</a>
+        <a class="pill" href="./ML101.html">Open ML101</a>
+        <a class="pill" href="./pong_evolution.html">Open Pong Evolution</a>
+      </div>
+    </section>
+
+    <section id="apps" aria-labelledby="apps-title">
+      <h2 class="section-title" id="apps-title">Current apps</h2>
+      <div class="grid">
+        <article class="card">
+          <div class="preview" aria-label="Live preview of ML101">
+            <iframe src="./ML101.html" title="ML101 preview" loading="lazy"></iframe>
+          </div>
+          <div class="content">
+            <div class="card-header">
+              <h2>ML101</h2>
+              <span class="version">v0.1.6</span>
+            </div>
+            <p class="description">
+              A compact, interactive machine-learning playground that lets you experiment with model
+              behavior in a beginner-friendly, visual format.
+            </p>
+            <div class="meta">
+              <div>
+                <strong>What to expect</strong>
+                <div class="description">Hands-on controls, immediate feedback, and lightweight experimentation without leaving the browser.</div>
+              </div>
+              <div>
+                <strong>What you can learn</strong>
+                <ul class="meta-list">
+                  <li>How tuning inputs changes model behavior.</li>
+                  <li>How simple ML ideas can be explored visually.</li>
+                  <li>How versions and iteration improve an educational app over time.</li>
+                </ul>
+              </div>
+            </div>
+            <div class="actions">
+              <a class="primary-link" href="./ML101.html">Launch ML101</a>
+              <a class="secondary-link" href="./VERSION_HISTORY.md">Version history</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="preview" aria-label="Live preview of Pong Evolution">
+            <iframe src="./pong_evolution.html" title="Pong Evolution preview" loading="lazy"></iframe>
+          </div>
+          <div class="content">
+            <div class="card-header">
+              <h2>Pong Evolution</h2>
+              <span class="version">v1.4.1</span>
+            </div>
+            <p class="description">
+              A plain JavaScript evolution demo where pong agents improve through repeated mutation,
+              selection, and fast simulation.
+            </p>
+            <div class="meta">
+              <div>
+                <strong>What to expect</strong>
+                <div class="description">Arcade-style visuals paired with an approachable introduction to search, optimization, and iterative agent improvement.</div>
+              </div>
+              <div>
+                <strong>What you can learn</strong>
+                <ul class="meta-list">
+                  <li>How mutation and selection can improve gameplay agents.</li>
+                  <li>How lightweight browser simulations can explain evolutionary strategies.</li>
+                  <li>How to compare current and archived versions of a single-file app.</li>
+                </ul>
+              </div>
+            </div>
+            <div class="actions">
+              <a class="primary-link" href="./pong_evolution.html">Launch Pong Evolution</a>
+              <a class="secondary-link" href="./pong_evolution.versions.json">Changelog data</a>
+            </div>
+          </div>
+        </article>
+
+        <article class="card">
+          <div class="placeholder" aria-label="Placeholder card for future apps">
+            <div>
+              <div class="placeholder-art">Future Apps</div>
+              <p class="future-note">This space is reserved for the next experiments, demos, and learning tools added to the repository.</p>
+            </div>
+          </div>
+          <div class="content">
+            <div class="card-header">
+              <h2>Coming soon</h2>
+              <span class="version">Planned</span>
+            </div>
+            <p class="description">
+              New cards can be added here as the repo grows, keeping a consistent catalog for future educational apps and prototypes.
+            </p>
+            <div class="meta">
+              <div>
+                <strong>Suggested metadata to add</strong>
+                <ul class="meta-list">
+                  <li>App preview image or embedded live thumbnail.</li>
+                  <li>Current version and release notes.</li>
+                  <li>Short description plus learning outcomes.</li>
+                </ul>
+              </div>
+            </div>
+            <div class="actions">
+              <a class="secondary-link" href="#repo-resources">Review repo resources</a>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="repo-resources" aria-labelledby="resources-title">
+      <h2 class="section-title" id="resources-title">Relevant repo resources</h2>
+      <div class="repo-links">
+        <a class="repo-link" href="./ML101_versions/README.md">ML101 archive README</a>
+        <a class="repo-link" href="./VERSION_HISTORY.md">ML101 version history</a>
+        <a class="repo-link" href="./version_archive_system.md">Version archive system</a>
+        <a class="repo-link" href="./ML101_versions/smart_sync_notes.md">Future development notes</a>
+        <a class="repo-link" href="./ML101_versions/">ML101 archived versions</a>
+        <a class="repo-link" href="./versions/">Pong archived versions</a>
+      </div>
+    </section>
+
+    <footer>
+      Designed as a simple repository dashboard so visitors can discover apps, launch them quickly,
+      and understand what each project teaches.
+    </footer>
+  </main>
+</body>
+</html>
