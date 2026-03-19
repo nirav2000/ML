@@ -377,6 +377,7 @@
     const SAVE_KEY = "ml101-qlearning-state-v1";
     const VERSION_HISTORY_FILE = "./VERSION_HISTORY.md";
     const ACTIVE_VERSION = versionBtn.textContent.trim();
+    const AUTO_OPEN_HISTORY = new URLSearchParams(window.location.search).get("versionHistory") === "1";
     let historyEntries = [];
     let selectedVersion = ACTIVE_VERSION;
 
@@ -1014,6 +1015,10 @@
     window.addEventListener("error", (event) => pushDebug(`window.error: ${event.message}`));
     window.addEventListener("unhandledrejection", (event) => pushDebug(`unhandledrejection: ${event.reason}`));
     window.addEventListener("resize", renderDebugSnapshot);
+
+    if (AUTO_OPEN_HISTORY) {
+      setTimeout(() => showVersionHistory(), 0);
+    }
 
     versionListEl.onclick = (event) => {
       const target = event.target.closest("button[data-version]");

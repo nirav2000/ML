@@ -80,7 +80,7 @@
   </div>
 
   <div class="footer">
-    Version <span id="appVersion">1.2.0</span> · <span class="version-link" id="openVersions">View changelog</span>
+    Version <span id="appVersion">1.2.0</span> · <span class="version-link" id="openVersions">View version history</span>
   </div>
 
   <div class="modal" id="versionsModal" aria-hidden="true">
@@ -94,6 +94,8 @@
   </div>
 
 <script>
+  const SEARCH_PARAMS = new URLSearchParams(window.location.search);
+  const AUTO_OPEN_HISTORY = SEARCH_PARAMS.get('versionHistory') === '1';
 (() => {
   const APP_FILE = 'pong_duel.html';
   const APP_VERSION = '1.2.0';
@@ -769,6 +771,10 @@
     versionsModal.classList.remove('show');
     versionsModal.setAttribute('aria-hidden', 'true');
   });
+  if (AUTO_OPEN_HISTORY) {
+    setTimeout(() => document.getElementById('openVersions').click(), 0);
+  }
+
   versionsModal.addEventListener('click', (event) => {
     if (event.target === versionsModal) {
       versionsModal.classList.remove('show');

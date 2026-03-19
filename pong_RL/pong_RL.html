@@ -96,7 +96,7 @@
   </div>
 
   <div class="footer">
-    Version <span id="appVersion">1.2.1</span> · <span class="version-link" id="openVersions">View changelog</span>
+    Version <span id="appVersion">1.2.1</span> · <span class="version-link" id="openVersions">View version history</span>
   </div>
 
   <div class="modal" id="versionsModal" aria-hidden="true">
@@ -113,7 +113,9 @@
 (() => {
   const APP_FILE = 'pong_RL/pong_RL.html';
   const APP_VERSION = '1.2.1';
-  const EMBED_MODE = new URLSearchParams(window.location.search).get('embed') === '1';
+  const SEARCH_PARAMS = new URLSearchParams(window.location.search);
+  const EMBED_MODE = SEARCH_PARAMS.get('embed') === '1';
+  const AUTO_OPEN_HISTORY = SEARCH_PARAMS.get('versionHistory') === '1';
   const HISTORY_FILE = 'pong_RL/pong_RL.versions.json';
   const SETTINGS_STORAGE_KEY = 'pong_RL.settings.v1';
   const CHECKPOINT_STORAGE_KEY = 'pong_RL.checkpoint.v1';
@@ -867,6 +869,10 @@ ${extra}`;
     document.getElementById('versionsModal').classList.remove('show');
     document.getElementById('versionsModal').setAttribute('aria-hidden', 'true');
   });
+  if (AUTO_OPEN_HISTORY) {
+    setTimeout(() => document.getElementById('openVersions').click(), 0);
+  }
+
   document.getElementById('versionsModal').addEventListener('click', (e) => {
     if (e.target.id === 'versionsModal') {
       document.getElementById('versionsModal').classList.remove('show');

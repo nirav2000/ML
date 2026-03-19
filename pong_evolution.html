@@ -91,7 +91,7 @@
   </div>
 
   <div class="footer">
-    Version <span id="appVersion">1.5.1</span> · <span class="version-link" id="openVersions">View changelog</span>
+    Version <span id="appVersion">1.5.1</span> · <span class="version-link" id="openVersions">View version history</span>
   </div>
 
   <div class="modal" id="versionsModal" aria-hidden="true">
@@ -108,7 +108,9 @@
 (() => {
   const APP_FILE = "pong_evolution.html";
   const APP_VERSION = "1.5.1";
-  const EMBED_MODE = new URLSearchParams(window.location.search).get('embed') === '1';
+  const SEARCH_PARAMS = new URLSearchParams(window.location.search);
+  const EMBED_MODE = SEARCH_PARAMS.get('embed') === '1';
+  const AUTO_OPEN_HISTORY = SEARCH_PARAMS.get('versionHistory') === '1';
   const EMBEDDED_HISTORY = {
     latest: "1.5.1",
     versions: [
@@ -164,11 +166,11 @@
       },
       {
         version: "1.2.2",
-        label: "UI startup hardening + safer changelog rendering",
+        label: "UI startup hardening + safer version history rendering",
         appFile: "versions/1.2.2/pong_evolution.html",
         changes: [
           "Added global error hooks to surface startup/runtime failures in-page.",
-          "Refactored changelog rendering into a shared helper and guarded modal element wiring.",
+          "Refactored version history rendering into a shared helper and guarded modal element wiring.",
           "Archived v1.2.1 under versions/1.2.1/pong_evolution.html."
         ]
       },
@@ -178,7 +180,7 @@
         appFile: "versions/1.2.1/pong_evolution.html",
         changes: [
           "Added defensive startup checks so runtime errors are surfaced in-page.",
-          "Added changelog fallback data so version history still works when JSON fetch fails.",
+          "Added version history fallback data so version history still works when JSON fetch fails.",
           "Archived the previous current build as versions/1.2.0/pong_evolution.html."
         ]
       },
@@ -187,17 +189,17 @@
         label: "Fixed GitHub Pages base-path version loading",
         appFile: "versions/1.2.0/pong_evolution.html",
         changes: [
-          "Fixed root URL detection so changelog/version switching works on project pages (e.g. /ML/...).",
+          "Fixed root URL detection so version-history/version switching works on project pages (e.g. /ML/...).",
           "Ensured current-file detection resolves correctly when loaded from root or /versions/... paths.",
           "Archived the previous current build as versions/1.1.0/pong_evolution.html."
         ]
       },
       {
         version: "1.1.0",
-        label: "Version archive support + changelog modal",
+        label: "Version archive support + version history modal",
         appFile: "versions/1.1.0/pong_evolution.html",
         changes: [
-          "Added version footer + changelog modal.",
+          "Added version footer + version history modal.",
           "Added root-aware version switching for current and archived paths.",
           "Fetches pong_evolution.versions.json with cache-busting to avoid stale history."
         ]
@@ -829,6 +831,10 @@ ${extra}`;
     document.getElementById('versionsModal').classList.remove('show');
     document.getElementById('versionsModal').setAttribute('aria-hidden', 'true');
   });
+  if (AUTO_OPEN_HISTORY) {
+    setTimeout(() => document.getElementById('openVersions').click(), 0);
+  }
+
   document.getElementById('versionsModal').addEventListener('click', (e) => {
     if (e.target.id === 'versionsModal') {
       document.getElementById('versionsModal').classList.remove('show');
