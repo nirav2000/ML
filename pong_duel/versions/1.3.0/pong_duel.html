@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pong Duel Lab — Evolution vs RL</title>
-  <link rel="stylesheet" href="./dashboard_brand/theme.css" />
-  <link rel="stylesheet" href="./dashboard_brand/components.css" />
+  <link rel="stylesheet" href="../../../dashboard_brand/theme.css" />
+  <link rel="stylesheet" href="../../../dashboard_brand/components.css" />
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.4; }
     .app-shell { display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap; }
@@ -80,7 +80,7 @@
   </div>
 
   <div class="footer">
-    Version <span id="appVersion">1.3.1</span> · <span class="version-link" id="openVersions">View version history</span>
+    Version <span id="appVersion">1.3.0</span> · <span class="version-link" id="openVersions">View version history</span>
   </div>
 
   <div class="modal" id="versionsModal" aria-hidden="true">
@@ -97,26 +97,16 @@
   const SEARCH_PARAMS = new URLSearchParams(window.location.search);
   const AUTO_OPEN_HISTORY = SEARCH_PARAMS.get('versionHistory') === '1';
 (() => {
-  const APP_FILE = 'pong_duel.html';
-  const APP_VERSION = '1.3.1';
+  const APP_FILE = 'pong_duel/versions/1.3.0/pong_duel.html';
+  const APP_VERSION = '1.3.0';
   const HISTORY_FILE = 'pong_duel.versions.json';
   const EMBEDDED_HISTORY = {
-    latest: '1.3.1',
+    latest: '1.3.0',
     versions: [
-      {
-        version: '1.3.1',
-        label: 'Aligned branded score chips',
-        appFile: 'pong_duel.html',
-        changes: [
-          'Reworked the branded arena score chips so both Evolution and RL labels align consistently on the left with their scores pinned to the right edge of each chip.',
-          'Updated the branded score numerals to use the same team color as the label text inside each box for a more unified read.',
-          'Archived the previous branded arena build as pong_duel/versions/1.3.0/pong_duel.html.'
-        ]
-      },
       {
         version: '1.3.0',
         label: 'Branded arena visuals',
-        appFile: 'pong_duel/versions/1.3.0/pong_duel.html',
+        appFile: 'pong_duel.html',
         changes: [
           'Extended brand mode so the live duel arena and chart adopt the same dark panel styling, label chips, and accent colors used by the dashboard preview art.',
           'Kept the original non-brand canvas rendering unchanged so toggling brand mode off restores the classic duel-lab look.',
@@ -568,7 +558,7 @@
     drawSeries(c, duelHistory, (d) => d.margin, palette.chartSeries, minY, rangeY);
   }
 
-  function drawBrandChip(x, y, w, h, label, score, color) {
+  function drawBrandChip(x, y, w, h, label, score, color, align = 'left') {
     const palette = getArenaPalette();
     ctx.fillStyle = palette.chipBg;
     const r = 14;
@@ -585,12 +575,14 @@
     ctx.fill();
     ctx.fillStyle = color;
     ctx.font = 'bold 15px Arial';
-    ctx.textAlign = 'left';
+    ctx.textAlign = align;
     ctx.textBaseline = 'middle';
-    ctx.fillText(label, x + 20, y + h / 2);
+    const labelX = align === 'right' ? x + w - 72 : x + 16;
+    const scoreX = align === 'right' ? x + w - 16 : x + 84;
+    ctx.fillText(label, labelX, y + h / 2);
+    ctx.fillStyle = palette.scoreText;
     ctx.font = 'bold 20px Arial';
-    ctx.textAlign = 'right';
-    ctx.fillText(String(score), x + w - 20, y + h / 2);
+    ctx.fillText(String(score), scoreX, y + h / 2);
     ctx.textAlign = 'left';
     ctx.textBaseline = 'alphabetic';
   }
@@ -633,8 +625,8 @@
     ctx.arc(W - 100, 70, 130, Math.PI * 1.35, Math.PI * 0.1, true);
     ctx.fill();
     drawRoundedRect(22, 18, W - 44, H - 36, 24, palette.fieldPanel);
-    drawBrandChip(48, 36, 168, 34, 'Evolution', evoScore, palette.evoSoft);
-    drawBrandChip(W - 216, 36, 168, 34, 'RL', rlScore, palette.rlSoft);
+    drawBrandChip(48, 36, 158, 34, 'Evolution', evoScore, palette.evoSoft);
+    drawBrandChip(W - 206, 36, 158, 34, 'RL', rlScore, palette.rlSoft, 'right');
   }
 
   function drawScene(leftY, rightY, ballX, ballY, evoScore, rlScore, status) {

@@ -1,10 +1,20 @@
 {
-  "latest": "1.3.0",
+  "latest": "1.3.1",
   "versions": [
+    {
+      "version": "1.3.1",
+      "label": "Aligned branded score chips",
+      "appFile": "pong_duel.html",
+      "changes": [
+        "Reworked the branded arena score chips so both Evolution and RL labels align consistently on the left with their scores pinned to the right edge of each chip.",
+        "Updated the branded score numerals to use the same team color as the label text inside each box for a more unified read.",
+        "Archived the previous branded arena build as pong_duel/versions/1.3.0/pong_duel.html."
+      ]
+    },
     {
       "version": "1.3.0",
       "label": "Branded arena visuals",
-      "appFile": "pong_duel.html",
+      "appFile": "pong_duel/versions/1.3.0/pong_duel.html",
       "changes": [
         "Extended brand mode so the live duel arena and chart adopt the same dark panel styling, label chips, and accent colors used by the dashboard preview art.",
         "Kept the original non-brand canvas rendering unchanged so toggling brand mode off restores the classic duel-lab look.",
