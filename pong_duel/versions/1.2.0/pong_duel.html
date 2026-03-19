@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Pong Duel Lab — Evolution vs RL</title>
-  <link rel="stylesheet" href="./dashboard_brand/theme.css" />
-  <link rel="stylesheet" href="./dashboard_brand/components.css" />
+  <link rel="stylesheet" href="../../../dashboard_brand/theme.css" />
+  <link rel="stylesheet" href="../../../dashboard_brand/components.css" />
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.4; }
     .app-shell { display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap; }
@@ -80,7 +80,7 @@
   </div>
 
   <div class="footer">
-    Version <span id="appVersion">1.3.0</span> · <span class="version-link" id="openVersions">View version history</span>
+    Version <span id="appVersion">1.2.0</span> · <span class="version-link" id="openVersions">View version history</span>
   </div>
 
   <div class="modal" id="versionsModal" aria-hidden="true">
@@ -97,8 +97,8 @@
   const SEARCH_PARAMS = new URLSearchParams(window.location.search);
   const AUTO_OPEN_HISTORY = SEARCH_PARAMS.get('versionHistory') === '1';
 (() => {
-  const APP_FILE = 'pong_duel.html';
-  const APP_VERSION = '1.3.0';
+  const APP_FILE = 'pong_duel/versions/1.2.0/pong_duel.html';
+  const APP_VERSION = '1.2.0';
   const HISTORY_FILE = 'pong_duel.versions.json';
   const EMBEDDED_HISTORY = {
     latest: '1.3.0',

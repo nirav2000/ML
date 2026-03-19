@@ -8,13 +8,13 @@
       "changes": [
         "Extended brand mode so the live duel arena and chart adopt the same dark panel styling, label chips, and accent colors used by the dashboard preview art.",
         "Kept the original non-brand canvas rendering unchanged so toggling brand mode off restores the classic duel-lab look.",
-        "Preserved the existing brand toggle and duel/training controls while making the branded watch/evaluation view feel more like the dashboard card."
+        "Archived the earlier builds under pong_duel/versions/* so version history can open older Duel Lab milestones directly."
       ]
     },
     {
       "version": "1.2.0",
       "label": "Optional brand theme + smoother training",
-      "appFile": "pong_duel.html",
+      "appFile": "pong_duel/versions/1.2.0/pong_duel.html",
       "changes": [
         "Added a footer theme toggle so the app can opt into the shared dashboard brand look without forcing it on by default.",
         "Updated the shared brand CSS so button clicks flash blue and toggle-style controls stay blue while active.",
@@ -24,7 +24,7 @@
     {
       "version": "1.1.0",
       "label": "Continuous joint training toggle",
-      "appFile": "pong_duel.html",
+      "appFile": "pong_duel/versions/1.1.0/pong_duel.html",
       "changes": [
         "Replaced the one-shot train-both bundle button with a true on/off continuous joint-training toggle.",
         "Added active/inactive button styling so the toggle reads blue when running and gray when off.",
@@ -34,7 +34,7 @@
     {
       "version": "1.0.0",
       "label": "Initial head-to-head arena",
-      "appFile": "pong_duel.html",
+      "appFile": "pong_duel/versions/1.0.0/pong_duel.html",
       "changes": [
         "Added a new arena app where the evolution agent and RL agent can train independently and then play each other directly.",
         "Added duel evaluation, live watch mode, shared score summaries, and a duel margin chart.",

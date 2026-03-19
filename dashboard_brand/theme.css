@@ -14,6 +14,25 @@ body.brand-app {
   --brand-radius: 28px;
   --brand-maxw: 1180px;
   --brand-font: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --duel-brand-chart-bg: #0d182b;
+  --duel-brand-chart-axis: #7f8ea7;
+  --duel-brand-chart-text: #dce9ff;
+  --duel-brand-chart-series: #8a72ff;
+  --duel-brand-field-bg: #121d39;
+  --duel-brand-field-panel: rgba(14, 25, 49, 0.84);
+  --duel-brand-chip-bg: #152847;
+  --duel-brand-line: #29536b;
+  --duel-brand-center-line: #dce9ff;
+  --duel-brand-score-text: #e9f1ff;
+  --duel-brand-status-text: #a6b5cf;
+  --duel-brand-evo: #ff8a7a;
+  --duel-brand-evo-soft: #ffb2a8;
+  --duel-brand-rl: #78a6ff;
+  --duel-brand-rl-soft: #a9c4ff;
+  --duel-brand-ball: #ffffff;
+  --duel-brand-flash: rgba(120, 166, 255, 0.14);
+  --duel-brand-glow-left: rgba(255, 138, 122, 0.10);
+  --duel-brand-glow-right: rgba(120, 166, 255, 0.10);
 }
 
 body.brand-app {
