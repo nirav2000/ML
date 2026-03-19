@@ -80,7 +80,7 @@
   </div>
 
   <div class="footer">
-    Version <span id="appVersion">1.2.0</span> · <span class="version-link" id="openVersions">View version history</span>
+    Version <span id="appVersion">1.3.0</span> · <span class="version-link" id="openVersions">View version history</span>
   </div>
 
   <div class="modal" id="versionsModal" aria-hidden="true">
@@ -98,19 +98,19 @@
   const AUTO_OPEN_HISTORY = SEARCH_PARAMS.get('versionHistory') === '1';
 (() => {
   const APP_FILE = 'pong_duel.html';
-  const APP_VERSION = '1.2.0';
+  const APP_VERSION = '1.3.0';
   const HISTORY_FILE = 'pong_duel.versions.json';
   const EMBEDDED_HISTORY = {
-    latest: '1.2.0',
+    latest: '1.3.0',
     versions: [
       {
-        version: '1.2.0',
-        label: 'Optional brand theme + smoother training',
+        version: '1.3.0',
+        label: 'Branded arena visuals',
         appFile: 'pong_duel.html',
         changes: [
-          'Added a footer theme toggle so the app can opt into the shared dashboard brand look without forcing it on by default.',
-          'Updated the shared brand CSS so button clicks flash blue and toggle-style controls stay blue while active.',
-          'Reduced continuous-training overhead by allowing silent background training cycles for a smoother duel-lab experience.'
+          'Extended brand mode so the live duel arena and chart adopt the same dark panel styling, label chips, and accent colors used by the dashboard preview art.',
+          'Kept the original non-brand canvas rendering unchanged so toggling brand mode off restores the classic duel-lab look.',
+          'Preserved the existing brand toggle and duel/training controls while making the branded watch/evaluation view feel more like the dashboard card.'
         ]
       }
     ]
@@ -423,14 +423,50 @@
     return ACTIONS[actionIndex] * 6.2;
   }
 
+  function getArenaPalette() {
+    if (!brandThemeActive) {
+      return {
+        chartBg: '#f9fafb',
+        chartAxis: '#9ca3af',
+        chartText: '#374151',
+        chartSeries: '#7c3aed',
+        fieldBg: '#ffffff',
+        fieldBorder: '#d1d5db',
+        centerLine: '#6b7280',
+        scoreText: '#111827',
+        statusText: '#111827',
+        evo: '#ef4444',
+        rl: '#2563eb',
+        ball: '#111827',
+        flash: 'rgba(124, 58, 237, 0.12)'
+      };
+    }
+    return {
+      chartBg: '#0d182b',
+      chartAxis: '#7f8ea7',
+      chartText: '#dce9ff',
+      chartSeries: '#8a72ff',
+      fieldBg: '#121d39',
+      fieldBorder: '#29536b',
+      centerLine: '#dce9ff',
+      scoreText: '#e9f1ff',
+      statusText: '#a6b5cf',
+      evo: '#ff8a7a',
+      rl: '#78a6ff',
+      ball: '#ffffff',
+      flash: 'rgba(120, 166, 255, 0.14)'
+    };
+  }
+
   function drawAxes(c, minY, maxY, label) {
-    c.ctx.strokeStyle = '#9ca3af';
+    const palette = getArenaPalette();
+    c.ctx.strokeStyle = palette.chartAxis;
     c.ctx.beginPath();
     c.ctx.moveTo(42, 10);
     c.ctx.lineTo(42, c.height - 24);
     c.ctx.lineTo(c.width - 10, c.height - 24);
     c.ctx.stroke();
-    c.ctx.fillStyle = '#374151';
+    c.ctx.fillStyle = palette.chartText;
     c.ctx.font = '12px Arial';
     c.ctx.fillText(maxY.toFixed(1), 4, 16);
     c.ctx.fillText(minY.toFixed(1), 4, c.height - 28);
@@ -455,11 +491,22 @@
 
   function drawDuelChart() {
     const c = duelChartCanvas;
+    const palette = getArenaPalette();
     c.ctx.clearRect(0, 0, c.width, c.height);
-    c.ctx.fillStyle = '#f9fafb';
+    c.ctx.fillStyle = palette.chartBg;
     c.ctx.fillRect(0, 0, c.width, c.height);
+    if (brandThemeActive) {
+      c.ctx.strokeStyle = palette.fieldBorder;
+      c.ctx.lineWidth = 1;
+      c.ctx.strokeRect(0.5, 0.5, c.width - 1, c.height - 1);
+      const gradient = c.ctx.createLinearGradient(0, 0, c.width, c.height);
+      gradient.addColorStop(0, 'rgba(255, 138, 122, 0.10)');
+      gradient.addColorStop(1, 'rgba(120, 166, 255, 0.08)');
+      c.ctx.fillStyle = gradient;
+      c.ctx.fillRect(0, 0, c.width, c.height);
+    }
     if (!duelHistory.length) {
-      c.ctx.fillStyle = '#374151';
+      c.ctx.fillStyle = palette.chartText;
       c.ctx.fillText('Duel score margin (Evolution score - RL score) per completed match.', 10, 20);
       return;
     }
@@ -467,31 +514,126 @@
     const maxY = Math.max(...duelHistory.map((d) => d.margin));
     const rangeY = Math.max(1, maxY - minY);
     drawAxes(c, minY, maxY, 'duel match axis');
-    drawSeries(c, duelHistory, (d) => d.margin, '#7c3aed', minY, rangeY);
+    drawSeries(c, duelHistory, (d) => d.margin, palette.chartSeries, minY, rangeY);
+  }
+
+  function drawBrandChip(x, y, w, h, text, color, align = 'left') {
+    ctx.fillStyle = '#152847';
+    ctx.strokeStyle = '#29536b';
+    ctx.lineWidth = 1.2;
+    const r = 14;
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = color;
+    ctx.font = 'bold 16px Arial';
+    ctx.textAlign = align;
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, align === 'right' ? x + w - 16 : x + 16, y + h / 2);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+  }
+
+  function drawRoundedRect(x, y, w, h, r, fillStyle, strokeStyle = null) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    if (fillStyle) {
+      ctx.fillStyle = fillStyle;
+      ctx.fill();
+    }
+    if (strokeStyle) {
+      ctx.strokeStyle = strokeStyle;
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+    }
+  }
+
+  function drawBrandArenaFrame(status) {
+    const gradient = ctx.createLinearGradient(0, 0, W, H);
+    gradient.addColorStop(0, '#101a33');
+    gradient.addColorStop(1, '#0b1730');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = 'rgba(255, 138, 122, 0.10)';
+    ctx.beginPath();
+    ctx.arc(100, 70, 130, Math.PI * 0.9, Math.PI * 1.65);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(120, 166, 255, 0.10)';
+    ctx.beginPath();
+    ctx.arc(W - 100, 70, 130, Math.PI * 1.35, Math.PI * 0.1, true);
+    ctx.fill();
+    drawRoundedRect(22, 18, W - 44, H - 70, 24, 'rgba(14, 25, 49, 0.84)', '#29536b');
+    drawBrandChip(48, 36, 138, 34, 'Evolution', '#ffb2a8');
+    drawBrandChip(W - 186, 36, 138, 34, 'RL', '#a9c4ff', 'right');
+    drawRoundedRect(W / 2 - 126, H - 56, 252, 28, 13, '#13284a', '#29536b');
+    ctx.fillStyle = '#dce9ff';
+    ctx.font = 'bold 13px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Shared arena · direct matchup', W / 2, H - 37);
+    ctx.fillText(status, W / 2, 30);
+    ctx.textAlign = 'left';
   }
 
   function drawScene(leftY, rightY, ballX, ballY, evoScore, rlScore, status) {
+    const palette = getArenaPalette();
     ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = '#ef4444';
-    ctx.fillRect(LEFT_X, leftY, PADDLE_W, PADDLE_H);
-    ctx.fillStyle = '#2563eb';
-    ctx.fillRect(RIGHT_X, rightY, PADDLE_W, PADDLE_H);
-    ctx.fillStyle = '#111827';
-    ctx.fillRect(ballX, ballY, BALL, BALL);
+    if (brandThemeActive) drawBrandArenaFrame(status);
+    else {
+      ctx.fillStyle = palette.fieldBg;
+      ctx.fillRect(0, 0, W, H);
+    }
+    ctx.fillStyle = palette.evo;
+    if (brandThemeActive) drawRoundedRect(LEFT_X, leftY, PADDLE_W, PADDLE_H, 6, palette.evo);
+    else ctx.fillRect(LEFT_X, leftY, PADDLE_W, PADDLE_H);
+    ctx.fillStyle = palette.rl;
+    if (brandThemeActive) drawRoundedRect(RIGHT_X, rightY, PADDLE_W, PADDLE_H, 6, palette.rl);
+    else ctx.fillRect(RIGHT_X, rightY, PADDLE_W, PADDLE_H);
+    ctx.fillStyle = palette.ball;
+    if (brandThemeActive) {
+      ctx.beginPath();
+      ctx.arc(ballX + BALL / 2, ballY + BALL / 2, BALL / 2 + 1, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.fillRect(ballX, ballY, BALL, BALL);
+    }
     if (flashTicks > 0) {
-      ctx.fillStyle = 'rgba(124, 58, 237, 0.12)';
+      ctx.fillStyle = palette.flash;
       ctx.fillRect(0, 0, W, H);
       flashTicks--;
     }
+    ctx.strokeStyle = palette.centerLine;
+    ctx.lineWidth = brandThemeActive ? 4 : 1;
     ctx.setLineDash([6, 6]);
     ctx.beginPath();
-    ctx.moveTo(W / 2, 0);
-    ctx.lineTo(W / 2, H);
+    ctx.moveTo(W / 2, brandThemeActive ? 76 : 0);
+    ctx.lineTo(W / 2, brandThemeActive ? H - 68 : H);
     ctx.stroke();
     ctx.setLineDash([]);
-    ctx.fillStyle = '#111827';
+    ctx.fillStyle = palette.scoreText;
+    ctx.font = brandThemeActive ? 'bold 17px Arial' : '16px Arial';
     ctx.fillText(`Evolution ${evoScore}  RL ${rlScore}`, 10, 16);
-    ctx.fillText(status, 10, 32);
+    if (!brandThemeActive) {
+      ctx.fillStyle = palette.statusText;
+      ctx.font = '14px Arial';
+      ctx.fillText(status, 10, 32);
+    }
   }
 
   function recordDuelResult(result) {
