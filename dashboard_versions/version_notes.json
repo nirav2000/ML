@@ -1,6 +1,15 @@
 {
   "versions": [
     {
+      "version": "1.4.0",
+      "label": "Branded JSON version-history viewer",
+      "notes": [
+        "Replaced dashboard version-history links that opened live apps with a branded JSON-driven version-history viewer.",
+        "Added ML101.versions.json so ML101 history can use the same structured viewer style as the other apps.",
+        "Archived the previous 1.3.0 dashboard and kept dashboard version metadata in sync."
+      ]
+    },
+    {
       "version": "1.3.0",
       "label": "Duel lab + preview workflow",
       "notes": [

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Version History</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #07111f;
+      --panel: rgba(13, 24, 43, 0.9);
+      --line: rgba(255, 255, 255, 0.1);
+      --text: #f3f7ff;
+      --muted: #a6b5cf;
+      --accent: #78a6ff;
+      --accent-2: #5fe2c2;
+      --shadow: 0 30px 80px rgba(0, 0, 0, 0.34);
+      --radius: 28px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(120,166,255,0.16), transparent 26%),
+        radial-gradient(circle at 85% 10%, rgba(95,226,194,0.16), transparent 24%),
+        linear-gradient(180deg, #0a1426 0%, var(--bg) 100%);
+      color: var(--text);
+    }
+    .shell { width: min(1040px, calc(100% - 24px)); margin: 0 auto; padding: 28px 0 56px; }
+    .panel {
+      background: linear-gradient(180deg, rgba(17, 31, 55, 0.92), rgba(10, 21, 38, 0.88));
+      border: 1px solid var(--line); border-radius: 32px; box-shadow: var(--shadow); backdrop-filter: blur(16px);
+    }
+    .hero { padding: 28px; margin-bottom: 20px; }
+    .eyebrow { display:inline-flex; padding:8px 14px; border-radius:999px; background:rgba(120,166,255,0.12); border:1px solid rgba(120,166,255,0.22); color:var(--accent); font-size:0.88rem; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; }
+    h1 { margin: 18px 0 10px; font-size: clamp(2.1rem, 6vw, 4rem); line-height: 1; }
+    .hero p { color: var(--muted); line-height: 1.7; margin: 0; }
+    .actions { display:flex; flex-wrap:wrap; gap:12px; margin-top:20px; }
+    .btn { display:inline-flex; align-items:center; justify-content:center; border-radius:999px; text-decoration:none; font-weight:700; padding:12px 16px; }
+    .btn.primary { background: linear-gradient(135deg, var(--accent), #8a72ff); color:#061120; }
+    .btn.secondary { color:var(--text); background:rgba(255,255,255,0.04); border:1px solid var(--line); }
+    .status { color: var(--muted); margin-top: 14px; }
+    .list { display:grid; gap:16px; }
+    .item { padding: 20px; border-radius: 24px; border:1px solid var(--line); background: rgba(255,255,255,0.03); }
+    .item.current { border-color: rgba(120,166,255,0.35); box-shadow: 0 0 0 1px rgba(120,166,255,0.18) inset; }
+    .row { display:flex; gap:12px; justify-content:space-between; align-items:flex-start; }
+    .tag { display:inline-flex; padding:8px 12px; border-radius:999px; background:rgba(120,166,255,0.12); border:1px solid rgba(120,166,255,0.24); color:var(--accent); font-size:0.82rem; font-weight:800; }
+    .label { color: var(--muted); margin-top: 6px; }
+    ul { margin: 12px 0 0 18px; line-height: 1.7; color: var(--text); }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="panel hero">
+      <div class="eyebrow">Version history</div>
+      <h1 id="title">Loading…</h1>
+      <p id="subtitle">Fetching structured version history.</p>
+      <div class="actions">
+        <a class="btn primary" href="./index.html">Back to dashboard</a>
+        <a class="btn secondary" id="rawLink" href="#">Open raw JSON</a>
+      </div>
+      <div class="status" id="status">Loading version history…</div>
+    </section>
+    <section class="list" id="list"></section>
+  </main>
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const file = params.get('file') || 'dashboard.versions.json';
+    const title = params.get('title') || 'Version History';
+    document.getElementById('title').textContent = title;
+    document.getElementById('rawLink').href = file;
+
+    fetch(file, { cache: 'no-store' })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data) => {
+        const current = data.current || data.latest || '';
+        document.getElementById('subtitle').textContent = current ? `Current version: ${current}` : 'Structured version history loaded.';
+        document.getElementById('status').textContent = `Loaded ${Array.isArray(data.versions) ? data.versions.length : 0} versions from ${file}`;
+        renderVersions(Array.isArray(data.versions) ? data.versions : [], current);
+      })
+      .catch((err) => {
+        document.getElementById('status').textContent = `Unable to load version history: ${err.message}`;
+      });
+
+    function renderVersions(versions, current) {
+      const list = document.getElementById('list');
+      if (!versions.length) {
+        list.innerHTML = '<section class="panel item">No versions found.</section>';
+        return;
+      }
+      list.innerHTML = versions.map((entry) => {
+        const notes = entry.changes || entry.notes || [];
+        return `
+          <article class="panel item${entry.version === current ? ' current' : ''}">
+            <div class="row">
+              <div>
+                <h2 style="margin:0; font-size:1.35rem;">${entry.version}</h2>
+                <div class="label">${entry.label || ''}</div>
+              </div>
+              <div class="tag">${entry.version === current ? 'Current' : 'Archived'}</div>
+            </div>
+            <ul>${notes.map((note) => `<li>${escapeHtml(note)}</li>`).join('')}</ul>
+          </article>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+  </script>
+</body>
+</html>

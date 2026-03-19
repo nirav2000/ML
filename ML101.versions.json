@@ -1,0 +1,90 @@
+{
+  "latest": "0.1.6",
+  "versions": [
+    {
+      "version": "0.1.6",
+      "label": "Startup robustness + hook checks",
+      "changes": [
+        "Added built-in startup self-check to detect missing critical UI/runtime hooks before interaction.",
+        "Added safe event wrappers so runtime handler errors are captured and surfaced via debug tools instead of failing silently.",
+        "Added robustness_check.sh to run repeatable local syntax and hook integrity checks before shipping changes."
+      ]
+    },
+    {
+      "version": "0.1.3",
+      "label": "Clickable version navigation + iPad diagnostics",
+      "changes": [
+        "Added clickable version navigation inside the Version History dialog to move back and forth between releases.",
+        "Highlighted the current active app version in the version list.",
+        "Added iPad-friendly debug tools and rolled the active label back to v0.1.3 while debugging."
+      ]
+    },
+    {
+      "version": "0.1.2",
+      "label": "Live update panel visibility fixes",
+      "changes": [
+        "Fixed rendering order so the Last Q-update panel is not overwritten by other explainer sections.",
+        "Highlighted the live-update panel with stronger emphasis.",
+        "Added a move-by-move one-line trace list for faster learning."
+      ]
+    },
+    {
+      "version": "0.1.1",
+      "label": "Pinned live update panel",
+      "changes": [
+        "Pinned the Last Q-update panel at the top-right explanation column.",
+        "Added sticky styling to keep live update details prominent next to the grid."
+      ]
+    },
+    {
+      "version": "0.1.0",
+      "label": "Hyperparameter controls",
+      "changes": [
+        "Exposed alpha, gamma, epsilon start, epsilon decay, and epsilon minimum in the UI.",
+        "Added validation guardrails and reset-to-defaults support for hyperparameters.",
+        "Persisted hyperparameters in localStorage and surfaced active values in the stats line."
+      ]
+    },
+    {
+      "version": "0.0.5",
+      "label": "In-app version history",
+      "changes": [
+        "Moved the live update section to the top of the right-side panel.",
+        "Added a footer app version control that opens version history.",
+        "Added in-app loading of history content via a dialog."
+      ]
+    },
+    {
+      "version": "0.0.4",
+      "label": "Metrics + persistence",
+      "changes": [
+        "Added rolling metrics for success rate, trap hits, timeouts, and average steps.",
+        "Added localStorage persistence for Q-table and training progress.",
+        "Added aria-live status and metrics updates."
+      ]
+    },
+    {
+      "version": "0.0.3",
+      "label": "Step mode + richer live learning",
+      "changes": [
+        "Added step-by-step training mode.",
+        "Added richer live learning visual feedback.",
+        "Added the right-side math explainer and live last-update details."
+      ]
+    },
+    {
+      "version": "0.0.2",
+      "label": "Control and visualization improvements",
+      "changes": [
+        "Improved interactive controls and training visualization behaviors."
+      ]
+    },
+    {
+      "version": "0.0.1",
+      "label": "Initial browser gridworld release",
+      "changes": [
+        "Initial browser-based Q-learning gridworld demo."
+      ]
+    }
+  ]
+}

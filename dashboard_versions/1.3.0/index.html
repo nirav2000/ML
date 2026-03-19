@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <base href="../../" />
   <title>ML Repo Dashboard</title>
   <style>
     :root {
@@ -391,7 +392,7 @@
     }
   </style>
 </head>
-<body data-dashboard-version="1.4.0">
+<body data-dashboard-version="1.3.0">
   <main class="shell">
     <section class="hero">
       <div class="hero-grid">
@@ -432,7 +433,7 @@
       </div>
       <div class="resource-links">
         <a class="resource-link" href="./markdown_viewer.html?file=README.md">README overview</a>
-        <a class="resource-link" href="./version_history_viewer.html?file=ML101.versions.json&title=ML101%20Version%20History">ML101 version history</a>
+        <a class="resource-link" href="./markdown_viewer.html?file=VERSION_HISTORY.md">ML101 version history</a>
         <a class="resource-link" href="./markdown_viewer.html?file=ML101_versions%2FREADME.md">ML101 archive README</a>
         <a class="resource-link" href="./markdown_viewer.html?file=version_archive_system.md">Version archive system notes</a>
         <a class="resource-link" href="./markdown_viewer.html?file=ML101_versions%2Fsmart_sync_notes.md">Future development notes</a>
@@ -484,7 +485,7 @@
         ],
         links: [
           { label: "Launch ML101", href: "./ML101.html", primary: true },
-          { label: "Version history", href: "./version_history_viewer.html?file=ML101.versions.json&title=ML101%20Version%20History", primary: false },
+          { label: "Version history", href: "./ML101.html?versionHistory=1", primary: false },
           { label: "Archive guide", href: "./markdown_viewer.html?file=ML101_versions%2FREADME.md", primary: false }
         ]
       },
@@ -505,7 +506,7 @@
         ],
         links: [
           { label: "Launch Pong Evolution", href: "./pong_evolution.html", primary: true },
-          { label: "Version history", href: "./version_history_viewer.html?file=pong_evolution.versions.json&title=Pong%20Evolution%20Version%20History", primary: false }
+          { label: "Version history", href: "./pong_evolution.html?versionHistory=1", primary: false }
         ]
       },
       {
@@ -525,7 +526,7 @@
         ],
         links: [
           { label: "Launch Pong RL", href: "./pong_RL/pong_RL.html", primary: true },
-          { label: "Version history", href: "./version_history_viewer.html?file=pong_RL%2Fpong_RL.versions.json&title=Pong%20RL%20Version%20History", primary: false }
+          { label: "Version history", href: "./pong_RL/pong_RL.html?versionHistory=1", primary: false }
         ]
       },
       {
@@ -545,7 +546,7 @@
         ],
         links: [
           { label: "Launch Compare Lab", href: "./pong_compare.html", primary: true },
-          { label: "Version history", href: "./version_history_viewer.html?file=pong_compare.versions.json&title=Pong%20Compare%20Lab%20Version%20History", primary: false }
+          { label: "Version history", href: "./pong_compare.html?versionHistory=1", primary: false }
         ]
       }
 ,
@@ -566,7 +567,7 @@
         ],
         links: [
           { label: "Launch Duel Lab", href: "./pong_duel.html", primary: true },
-          { label: "Version history", href: "./version_history_viewer.html?file=pong_duel.versions.json&title=Pong%20Duel%20Lab%20Version%20History", primary: false }
+          { label: "Version history", href: "./pong_duel.html?versionHistory=1", primary: false }
         ]
       }
     ];
